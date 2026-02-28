@@ -93,9 +93,6 @@ When you pass a specification (`--spec_path`), the pipeline extracts basis parag
 bash scripts/run_pipeline.sh data/raw/sample_oa.txt data/raw/my_spec.txt
 ```
 
-## 📝 New copy (TODO)
-
-Paste your new marketing / positioning copy here and we will integrate it into the README.
 
 ## Project structure
 
