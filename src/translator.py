@@ -140,7 +140,11 @@ class PatentTranslator:
         for pat, repl in mapping:
             cn = re.sub(pat, repl, cn, flags=re.IGNORECASE)
 
-        cn = re.sub(r"\s+", "", cn)
+        # Remove spaces between Chinese characters only, preserving spaces between English words
+        # Use regex: remove space when it's between two Chinese characters ([\u4e00-\u9fff])
+        cn = re.sub(r"(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])", "", cn)
+        # Also remove spaces around Chinese punctuation
+        cn = re.sub(r"\s*([。！？?；;,，:：])\s*", r"\1", cn)
         cn = cn.strip().strip(".")
         if not cn.endswith("。"):
             cn = cn + "。"
