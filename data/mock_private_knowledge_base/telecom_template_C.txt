@@ -1,0 +1,30 @@
+Title: Telecom Response Template C — Combined Art. 84 + Art. 56 Strategy for NR Resource Allocation
+
+Context
+Some Office Actions raise Art. 84 clarity and Art. 56 inventive-step objections in the same communication. This template provides a combined response structure to avoid inconsistencies between claim amendments (clarity) and the inventive-step argument.
+
+Core response logic
+1) Sequence the response
+- First address Art. 84 issues by clarifying boundaries (minimal amendment).
+- Then re-assess D1/D2 mapping under Art. 56 using the amended claim.
+
+2) Claim amendment principles
+- Keep amendments minimal and technical.
+- Prefer adding an objective constraint (e.g., parameter relationship, mapping rule, timing condition) that also supports the inventive-step distinction.
+
+3) Inventive step narrative consistent with amendments
+- Explain that the amendment is not an arbitrary narrowing but reflects the actual contribution.
+- Use the same terminology as in the prior art analysis (avoid shifting definitions).
+
+4) Standard-aware argumentation
+- If a 3GPP TS is cited, clarify whether it mandates the specific behavior.
+- Emphasize that compliance with a standard does not automatically render every implementation detail obvious.
+
+Suggested wording (examples)
+- “The amendment introduced to resolve the Art. 84 EPC objection also defines the concrete technical constraint that is not taught by D1 and not derivable from D2.”
+- “Even assuming the skilled person would consult 3GPP TS 38.213, the standard does not provide an unambiguous teaching or motivation for the specific coupling of <PARAMETERS> as claimed.”
+
+Checklist
+- Amendment supported by application as filed
+- Art. 84 reasoning does not undercut Art. 56 argument
+- D1/D2 analysis updated to amended claim

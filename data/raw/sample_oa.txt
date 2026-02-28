@@ -1,0 +1,25 @@
+EUROPEAN PATENT OFFICE
+80298 MUNICH, GERMANY
+
+Communication pursuant to Article 94(3) EPC
+
+Application No:20189542.8
+Applicant:Global Telecom Solutions Inc.
+Date:28.02.2026
+Examiner: Tapaninen, Jukka
+
+1. Documents cited (Prior Art)
+The following documents are referred to in this communication:
+D1: US 2021/0058912 A1 (SAMSUNG ELECTRONICS CO LTD) 25 February 2021
+D2: 3GPP TS 38.211 V16.0.0 "NR; Physical channels and modulation"
+
+2. Clarity (Art. 84 EPC)
+Claim 1 refers to a "dynamic scheduling offset". This term is considered vague. In the field of 5G NR, it is unclear whether this offset relates to the $K_0$ parameter (PDSCH) or the $K_2$ parameter (PUSCH). The applicant is requested to clarify the technical scope.
+
+3. Inventive Step (Art. 56 EPC)
+The subject-matter of independent claim 1 does not involve an inventive step for the following reasons:
+D1 discloses a method for resource allocation in a wireless network where a User Equipment (UE) receives Downlink Control Information (DCI) indicating a frequency resource.
+The difference between the subject-matter of claim 1 and D1 is the specific mapping of the "hybrid-ARQ feedback timing".
+However, D2 (3GPP TS 38.211) already describes the standard procedure for HARQ-ACK codebook construction.
+A person skilled in the art, starting from D1 and seeking to optimize feedback efficiency in a New Radio (NR) context, would find it obvious to apply the teachings of D2 to the system of D1.
+Therefore, the combination of D1 and D2 renders the subject-matter of claim 1 obvious.

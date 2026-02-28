@@ -1,0 +1,9 @@
+
+#Examiner: Tapaninen, Jukka
+Title: Telecom Response Template D — Reasonable Expectation of Success & Standard vs Proprietary Incompatibility (Art. 56 EPC)
+
+Regarding the alleged combination of D1 and D2, the Applicant respectfully submits that a person skilled in the art would NOT have a reasonable expectation of success, nor a technical motivation to combine these teachings.
+
+Firstly, D1 describes a specific, proprietary resource allocation mechanism optimized for a closed system. In contrast, D2 (3GPP TS 38.XXX) defines a rigid, standardized framework for 5G NR, which relies on strict synchronization and predefined DCI formats. Integrating the adaptive logic of D1 into the standardized HARQ-ACK codebook construction of D2 would require a fundamental redesign of the 3GPP Physical Layer signaling structure, which goes far beyond a routine adaptation.
+
+Furthermore, such a combination would result in an unacceptable increase in RRC signaling overhead and latency, counteracting the very problem of 'efficiency' the current application seeks to solve. Therefore, the claimed subject matter provides a technical synergy that cannot be achieved by the mere collocation of D1 and D2.

@@ -1,0 +1,35 @@
+Title: Telecom Response Template B — Art. 56 EPC (Inventive Step) with 3GPP Constraints
+
+Context
+Inventive-step attacks often cite a patent document (e.g., D1) combined with a 3GPP standard (e.g., D2: 3GPP TS 38.213 V15.2.0) to argue that the claimed feature is an obvious implementation choice.
+
+Core response logic (Problem–Solution Approach)
+1) Closest prior art
+- Identify which document discloses the most relevant technical context.
+- If D1 is not in the same technical context (e.g., different channel, different scheduling mode), argue D1 is not a realistic starting point.
+
+2) Distinguishing features
+- List claim features not disclosed in D1.
+- For each feature, cite where it appears in the application and why it is technically meaningful.
+
+3) Technical effect
+- Provide a concrete effect (e.g., reduced signaling overhead, improved reliability under HARQ timing constraints, deterministic resource allocation).
+- Tie the effect to the distinguishing feature rather than to an overall goal.
+
+4) Objective technical problem
+- Formulate as: “How to <achieve effect> in <context> without <trade-off>.”
+- Avoid including the solution wording.
+
+5) Non-obviousness vs 3GPP citations
+- Argue that 3GPP TS documents often define multiple options and do not teach the specific selection/combination.
+- Emphasize normative vs informative sections (“shall” vs “may”).
+- If D2 is a standard: it does not provide motivation to select the claimed parameter coupling or the specific offset logic.
+
+Suggested wording (examples)
+- “D2 (3GPP TS 38.213 V15.2.0) discloses multiple alternatives for <CONFIG>, and does not derive the specific offset relationship Δ recited in claim 1. The skilled person has no reason to select this specific coupling absent hindsight.”
+- “The claimed feature achieves deterministic allocation under timing constraints, which is neither addressed nor suggested by D1 alone or D1 in combination with D2.”
+
+Checklist
+- Clear mapping of D1/D2 to features
+- Objective technical problem stated narrowly
+- Standard cited only for what it actually mandates

@@ -1,0 +1,36 @@
+venv/
+.env
+private_knowledge_base/
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+build/
+dist/
+*.egg-info/
+
+.DS_Store
+
+.vscode/
+.idea/
+
+# Local vector DB / Chroma
+chroma_db/
+.chroma/
+chroma/
+chromadb/
+
+# PatentVectorStore persistence
+data/vector_db/
+
+# Pipeline generated artifacts
+data/raw/*.info.json
+data/raw/*.results.json
+data/output/

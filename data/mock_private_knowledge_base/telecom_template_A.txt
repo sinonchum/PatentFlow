@@ -1,0 +1,30 @@
+Title: Telecom Response Template A — Art. 84 EPC (Clarity) for 5G/NR Terms
+
+Context
+Typical objections under Art. 84 EPC arise when claim terms are broad or lack objective boundaries in a telecom context (e.g., “user equipment”, “resource”, “offset”, “PUCCH configuration”).
+
+Core response logic
+1) Identify the exact unclear expression
+- Quote the term(s) from the claim and the passage(s) in the Office Action.
+- Explain why the term is objectively clear in the technical context, or why additional technical limitations are appropriate.
+
+2) Provide objective technical boundaries
+- Replace subjective language with measurable parameters (e.g., define “offset” via a reference point, index, or mapping table).
+- If relevant, specify the protocol layer (PHY/MAC/RRC) and the entity (UE/gNB) responsible.
+
+3) Anchor terms to the standard where appropriate (without importing limitations)
+- Mention standard terminology to clarify meaning (e.g., 3GPP TS 38.213, 3GPP TS 38.331).
+- Clarify that the claim defines the feature by functional-technical constraints rather than by merely citing the standard.
+
+4) Proposed amendment strategy
+- Add one or two concrete constraints that the skilled person can verify from the claim alone.
+- Ensure support in the description (basis for amendment) and consistency of reference signs (if any).
+
+Suggested wording (examples)
+- “The term ‘user equipment’ is a well-established term in the art. For avoidance of doubt, the claim is amended to specify that the UE is configured to perform <STEP> at the PHY layer in accordance with a configured <PARAMETER>.”
+- “The alleged ambiguity is resolved by defining the offset Δ with respect to <REFERENCE> and by specifying the mapping between <INDEX> and <RESOURCE>.”
+
+Checklist
+- Claim language provides objective boundaries
+- Consistent entity responsibility (UE vs gNB)
+- No added matter introduced by the clarification amendment
