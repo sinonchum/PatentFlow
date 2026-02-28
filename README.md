@@ -86,6 +86,18 @@ The frontend is built with **Next.js** and **Tailwind CSS**. It abandons the "ch
 - Ultra-compact sidebars for document uploads.
 - Tabbed workspaces for structured output review.
 
+### Art. 56 Claim Chart — Feature-by-feature prior art mapping
+
+![Claim Chart View](docs/screenshots/claim_chart.png)
+
+### Art. 123(2) Translation Verifier — CN↔EN dual-verification with mismatch flagging
+
+![Translation Verifier](docs/screenshots/verifier.png)
+
+### Response Draft — Auto-generated EPO response letter
+
+![Response Draft](docs/screenshots/response_draft.png)
+
 ---
 
 ## 🚀 Getting Started (Local Deployment)
