@@ -93,6 +93,25 @@ When you pass a specification (`--spec_path`), the pipeline extracts basis parag
 bash scripts/run_pipeline.sh data/raw/sample_oa.txt data/raw/my_spec.txt
 ```
 
+### 5) Agent skills (claim chart / claim classification)
+
+`src/skills.py` contains lightweight, composable “agent skills” for patent prosecution tasks:
+
+- `generate_claim_chart(claim_text, prior_art_text)`
+  - Produces a feature-by-feature chart skeleton for Art. 56 EPC analysis.
+- `classify_claim(claim_text)`
+  - Classifies a claim as Method/Apparatus and makes a simple independent/dependent guess.
+
+Run tests:
+
+```bash
+source venv/bin/activate
+python3 -m pytest -q tests/test_skills.py
+```
+
+## 📝 New copy (TODO)
+
+Paste your new marketing / positioning copy here and we will integrate it into the README.
 
 ## Project structure
 
@@ -201,5 +220,5 @@ bash scripts/run_pipeline.sh data/raw/sample_oa.txt data/raw/my_spec.txt
 
 ```bash
 source venv/bin/activate
-python tests/test_translator.py
+python3 tests/test_translator.py
 ```
