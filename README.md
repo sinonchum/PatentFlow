@@ -38,6 +38,10 @@ The repository includes a `.gitignore` that excludes:
   - Adjusts retrieval ranking based on the specific examiner’s historically accepted argument patterns.
 - **CN→EN legal translation (CN to EPO)**
   - Aligns Chinese text to EPO-style legal English terminology (e.g., “包括”→“comprising”, “其中”→“wherein”, “被配置为”→“configured to”).
+  - **Precision CN-EN Dual-Verification Table**
+    - Dual-Language Alignment: generates professional side-by-side comparison tables (Markdown/CSV) optimized for Chinese priority documents.
+    - Back-Translation (Re-verification): implements a "closed-loop" verification by translating the generated English claims back into Chinese to spot semantic drifts (e.g., ensuring "comprising" maps back to the open-ended "包括").
+    - Article 123(2) Risk Mitigation: helps verify that the English translation remains strictly within the original disclosure of the Chinese priority application.
 - **Automated drafting**
   - Generates structured response drafts and can integrate “basis in the application as filed” excerpts.
 
