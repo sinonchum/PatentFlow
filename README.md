@@ -137,4 +137,23 @@ PatentFlow/
 
 ---
 
+## 🗺️ Roadmap (Upcoming Features)
+
+### 1. Local RAG Architecture (ChromaDB / FAISS)
+Currently, evaluating long (100+ pages) 3GPP TS documents directly through the LLM causes context-window overflow and GPU OOM.
+- **Action Plan**: Introduce a local Vector Database (ChromaDB) to our FastAPI backend. The system will chunk prior-art documents and embed them locally. When evaluating specific claims (e.g., Feature 1.1), the AI retrieves only the Top-3 relevant paragraphs.
+- **Business Value**: *"In real-world prosecution, standard documents are hundreds of pages long. Local RAG slashes GPU VRAM costs, stops hallucinations (the AI retrieves, rather than reconstructs), and provides exact source citations for the attorney."*
+
+### 2. Native Docx / EPO-XML Export
+Attorneys do not deliver web pages; they deliver formal tracked-change Word documents or EPO-compliant XML files.
+- **Action Plan**: Integrate `python-docx` into the backend and an "Export to .docx" functionality in the Next.js UI.
+- **Business Value**: *"This tool does not change an attorney's habits; it augments them. Auto-generated Art. 56 Claim Charts or Response drafts can be downloaded directly as .docx. From there, the attorney switches on 'Track Changes' for final polish, enabling a seamless handoff from AI to human."*
+
+### 3. CI/CD & Robust Workflows
+As the codebase scales, enforcing quality and smooth handoffs is critical.
+- **Action Plan**: Add GitHub Actions `.github/workflows/main.yml` to automatically run Python `flake8` linting and Next.js `npm run build` upon every commit.
+- **Business Value**: *"The architecture is designed with enterprise-grade CI/CD pipelines from day one. This guarantees that as the team grows, automated code quality checks and deployments are strictly monitored."*
+
+---
+
 *Disclaimer: This project demonstrates the intersection of software engineering and patent prosecution. It is designed to assist, not replace, the strategic judgment of a qualified European Patent Attorney.*
