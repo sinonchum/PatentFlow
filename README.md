@@ -57,40 +57,48 @@ graph TD
 
     style Frontend fill:#f8fafc,stroke:#cbd5e1
     style Backend fill:#f0fdf4,stroke:#86efac
-    style Privacy Layer fill:#fef2f2,stroke:#fca5a5 ```
+    style Privacy Layer fill:#fef2f2,stroke:#fca5a5
+```
 
-✨ Core Capabilities (Agent Skills)
-Note: Specific system prompts, proprietary 3GPP mapping dictionaries, and core heuristic regex parsing algorithms are intentionally omitted from this public repository to protect the underlying intellectual logic. The demonstrable features include:
+---
 
-1. Dual-Verification Translation (Art. 123(2) Mitigation)
+## ✨ Core Capabilities (Agent Skills)
+
+> **Note**: Specific system prompts, proprietary 3GPP mapping dictionaries, and core heuristic regex parsing algorithms are intentionally omitted from this public repository to protect the underlying intellectual logic. The demonstrable features include:
+
+### 1. Dual-Verification Translation (Art. 123(2) Mitigation)
 Generates a strict side-by-side alignment: Original CN | Target EN | Back-translated CN.
 
-Logic: Automatically flags verb-scope mismatches (e.g., "comprising" vs "consisting of") with amber highlights to prevent unallowable amendments.
+**Logic**: Automatically flags verb-scope mismatches (e.g., "comprising" vs "consisting of") with amber highlights to prevent unallowable amendments.
 
-2. Automated Claim Charting (Art. 56 Analysis)
+### 2. Automated Claim Charting (Art. 56 Analysis)
 Maps specific claim features (1.1, 1.2...) to identified paragraphs in Prior Art (D1).
 
 Processes concurrently through the Celery worker pool, displaying real-time granular progress (Parsing → LLM Matching → Drafting).
 
-3. EPO Response Drafting
+### 3. EPO Response Drafting
 Auto-generates formal response letters based on predefined examiner biases.
 
 Exports to clean, standard-compliant formatting.
 
-🚀 Quick Start (Local Deployment)
-Option A: Docker Compose (Recommended for Intranet)
+---
+
+## 🚀 Quick Start (Local Deployment)
+
+### Option A: Docker Compose (Recommended for Intranet)
 The entire asynchronous stack can be spun up using Docker.
 
-Bash
+```bash
 docker compose up --build -d
-Frontend: http://localhost:3000
+```
 
-API Docs: http://localhost:8000/docs
+- **Frontend**: http://localhost:3000
+- **API Docs**: http://localhost:8000/docs
 
-Option B: Manual Startup (For Development)
-Requires: Python 3.9+, Node.js 18+, Redis instance.
+### Option B: Manual Startup (For Development)
+**Requires**: Python 3.9+, Node.js 18+, Redis instance.
 
-Bash
+```bash
 # 1. Start Redis Server
 redis-server
 
@@ -102,8 +110,13 @@ REDIS_URL=redis://localhost:6379/0 celery -A src.celery_app.celery_app worker -l
 
 # 4. Start Next.js Frontend
 cd frontend && npm install && NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev
-📁 Project Structure
-Plaintext
+```
+
+---
+
+## 📁 Project Structure
+
+```plaintext
 PatentFlow/
 ├── src/
 │   ├── api.py              # FastAPI endpoints + CORS
@@ -114,4 +127,8 @@ PatentFlow/
 │   └── src/app/page.tsx    # Optimistic Workspace UI
 ├── docker-compose.yml      # Microservices orchestration
 └── requirements.txt
-Disclaimer: This project demonstrates the intersection of software engineering and patent prosecution. It is designed to assist, not replace, the strategic judgment of a qualified European Patent Attorney.
+```
+
+---
+
+*Disclaimer: This project demonstrates the intersection of software engineering and patent prosecution. It is designed to assist, not replace, the strategic judgment of a qualified European Patent Attorney.*
