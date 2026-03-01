@@ -1,12 +1,204 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UploadCloud, FileText, Zap, Download, ChevronRight, Sparkles, Shield, BarChart3, Languages, FileEdit } from "lucide-react";
+import { UploadCloud, FileText, Zap, Download, ChevronRight, Sparkles, Shield, BarChart3, Languages, FileEdit, X, Radio } from "lucide-react";
+
+type TaskState = "PENDING" | "STARTED" | "PROGRESS" | "SUCCESS" | "FAILURE";
+
+type ClaimChartRow = {
+  feature_id?: string;
+  claim_limitation?: string;
+  d1_mapping?: string;
+};
+
+type TaskResult = {
+  status?: string;
+  claim_chart?: ClaimChartRow[];
+  translation_table_markdown?: string;
+  response_draft?: string;
+};
+
+type StatusResponse = {
+  task_id: string;
+  state: TaskState | string;
+  meta?: { step?: string; [k: string]: unknown } | null;
+  result?: TaskResult | null;
+  error?: string | null;
+};
+
+type TranslationRow = {
+  originalCn: string;
+  targetEn: string;
+  backCn: string;
+  hasRisk: boolean;
+};
+
+function parseMarkdownPipeTable3(md: string): TranslationRow[] {
+  const text = (md || "").trim();
+  if (!text) return [];
+
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l);
+
+  const rows: TranslationRow[] = [];
+  for (const line of lines) {
+    // Skip header / separator
+    if (!line.startsWith("|")) continue;
+    if (line.includes("---")) continue;
+    if (line.includes("Original CN") || line.includes("原始中文")) continue;
+
+    const cells = line
+      .split("|")
+      .map((c) => c.trim())
+      .filter((c) => c.length > 0);
+    if (cells.length < 3) continue;
+
+    const originalCn = cells[0] || "";
+    const targetEn = cells[1] || "";
+    const backCn = cells[2] || "";
+    const hasRisk = /VERB_MISMATCH|\*\*/.test(originalCn) || /VERB_MISMATCH|\*\*/.test(backCn);
+    rows.push({ originalCn, targetEn, backCn, hasRisk });
+  }
+  return rows;
+}
 
 export default function Workspace() {
+  const [showBanner, setShowBanner] = useState(true);
+  const [isExecuting, setIsExecuting] = useState(false);
+
+  const [examinerBias, setExaminerBias] = useState("Jukka Tapaninen - Telecom");
+  const [claimType, setClaimType] = useState("Method");
+
+  const [taskId, setTaskId] = useState<string | null>(null);
+  const [taskState, setTaskState] = useState<TaskState | string | null>(null);
+  const [taskStep, setTaskStep] = useState<string>("");
+  const [queuePosition, setQueuePosition] = useState<number | null>(null);
+  const [queueSize, setQueueSize] = useState<number | null>(null);
+  const [taskError, setTaskError] = useState<string | null>(null);
+  const [result, setResult] = useState<TaskResult | null>(null);
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+
+  const handleExecute = async () => {
+    console.log('[Debug] handleExecute start');
+    setIsExecuting(true);
+    setTaskError(null);
+    setResult(null);
+    setTaskState("PENDING");
+    setTaskStep("Queued");
+    setQueuePosition(null);
+    setQueueSize(null);
+
+    try {
+      const resp = await fetch(`${API_BASE}/api/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          office_action_text: "",
+          specification_text: "",
+          examiner_preference: examinerBias,
+          claim_type: claimType,
+        }),
+      });
+
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(text || `HTTP ${resp.status}`);
+      }
+
+      const data = (await resp.json()) as { task_id?: string; queue_position?: number | null; queue_size?: number | null };
+      console.log('[Debug] /api/generate response:', data);
+      if (!data.task_id) {
+        throw new Error("Missing task_id from /api/generate");
+      }
+      setTaskId(data.task_id);
+      if (typeof data.queue_position === "number") {
+        setQueuePosition(data.queue_position);
+      }
+      if (typeof data.queue_size === "number") {
+        setQueueSize(data.queue_size);
+      }
+      setTaskStep("Queued");
+    } catch (e) {
+      console.error('[Debug] handleExecute error:', e);
+      setTaskError(e instanceof Error ? e.message : String(e));
+      setIsExecuting(false);
+      setTaskId(null);
+      setTaskState("FAILURE");
+    }
+  };
+
+  useEffect(() => {
+    if (!taskId || !isExecuting) return;
+
+    let cancelled = false;
+    const interval = window.setInterval(async () => {
+      try {
+        const resp = await fetch(`${API_BASE}/api/status/${taskId}`);
+        if (!resp.ok) {
+          const text = await resp.text();
+          throw new Error(text || `HTTP ${resp.status}`);
+        }
+        const data = (await resp.json()) as StatusResponse;
+        console.log('[Debug] /api/status response:', data);
+        if (cancelled) return;
+
+        setTaskState(data.state);
+        const step = data?.meta?.step;
+        if (typeof step === "string" && step) {
+          setTaskStep(step);
+        }
+
+        const qp = data?.meta?.queue_position;
+        if (typeof qp === "number") {
+          setQueuePosition(qp);
+        }
+
+        const qs = data?.meta?.queue_size;
+        if (typeof qs === "number") {
+          setQueueSize(qs);
+        }
+
+        if (data.state === "SUCCESS") {
+          console.log('[Debug] Task SUCCESS, result:', data.result);
+          setResult(data.result || null);
+          setIsExecuting(false);
+          window.clearInterval(interval);
+          // Scroll to results section
+          setTimeout(() => {
+            const tabsSection = document.querySelector('section[class*="pb-16"]');
+            if (tabsSection) {
+              tabsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          }, 100);
+        }
+
+        if (data.state === "FAILURE") {
+          console.error('[Debug] Task FAILURE:', data.error);
+          setTaskError(data.error || "Task failed");
+          setIsExecuting(false);
+          window.clearInterval(interval);
+        }
+      } catch (e) {
+        if (cancelled) return;
+        setTaskError(e instanceof Error ? e.message : String(e));
+        setIsExecuting(false);
+        window.clearInterval(interval);
+      }
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [taskId, isExecuting, API_BASE]);
+
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white font-sans relative overflow-x-hidden">
       {/* Background gradient effects */}
@@ -15,6 +207,33 @@ export default function Workspace() {
         <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-blue-600/8 rounded-full blur-[100px]" />
         <div className="absolute top-[40%] right-[20%] w-[300px] h-[300px] bg-indigo-500/5 rounded-full blur-[80px]" />
       </div>
+
+      {/* Demo Banner */}
+      {showBanner && (
+        <div className="relative z-20 w-full bg-gradient-to-r from-purple-950/80 via-indigo-950/80 to-blue-950/80 border-b border-purple-500/20 backdrop-blur-xl">
+          <div className="max-w-7xl mx-auto px-6 py-2.5 flex items-center justify-center gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="relative flex items-center justify-center">
+                <Radio className="w-3.5 h-3.5 text-purple-400" />
+                <span className="absolute w-2 h-2 rounded-full bg-purple-400 animate-ping opacity-40" />
+              </div>
+              <span className="text-xs sm:text-sm font-medium text-white/90 tracking-wide">
+                <span className="text-purple-300 font-semibold">Live UI Demo</span>
+                <span className="mx-2 text-white/20">·</span>
+                <span className="text-white/60">The core AI engine runs 100% locally for client confidentiality.</span>
+              </span>
+              <Shield className="w-3.5 h-3.5 text-emerald-400/70 hidden sm:block" />
+            </div>
+            <button
+              onClick={() => setShowBanner(false)}
+              className="absolute right-4 p-1 rounded-md hover:bg-white/10 text-white/30 hover:text-white/60 transition-colors"
+              aria-label="Dismiss banner"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Top Nav */}
       <nav className="relative z-10 border-b border-white/[0.06] bg-black/20 backdrop-blur-xl">
@@ -29,9 +248,9 @@ export default function Workspace() {
           <div className="flex items-center gap-4">
             <span className="text-xs text-white/40 font-medium hidden md:inline">Document Processing Workspace</span>
             <div className="h-4 w-px bg-white/10 hidden md:block" />
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs text-emerald-400 font-medium">Local Mode</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20">
+              <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+              <span className="text-xs text-purple-400 font-medium">Static Demo</span>
             </div>
           </div>
         </div>
@@ -92,15 +311,15 @@ export default function Workspace() {
                 <Label className="text-xs font-medium text-white/40 uppercase tracking-wider mb-2 block">
                   Examiner Bias
                 </Label>
-                <Select defaultValue="telecom">
+                <Select value={examinerBias} onValueChange={setExaminerBias}>
                   <SelectTrigger className="w-full bg-white/[0.04] border-white/[0.08] text-white/80 text-sm h-9 rounded-lg hover:border-white/20 transition-colors">
                     <SelectValue placeholder="Select examiner" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#1a1a2e] border-white/10">
-                    <SelectItem value="telecom">Jukka Tapaninen — Telecom</SelectItem>
-                    <SelectItem value="mechanics">Maria Schmidt — Mechanics</SelectItem>
-                    <SelectItem value="chemistry">Hans Mueller — Chemistry</SelectItem>
-                    <SelectItem value="unbiased">General — No Bias</SelectItem>
+                    <SelectItem value="Jukka Tapaninen - Telecom">Jukka Tapaninen — Telecom</SelectItem>
+                    <SelectItem value="Maria Schmidt - Mechanics">Maria Schmidt — Mechanics</SelectItem>
+                    <SelectItem value="Hans Mueller - Chemistry">Hans Mueller — Chemistry</SelectItem>
+                    <SelectItem value="General - No Specific Bias">General — No Bias</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -108,15 +327,15 @@ export default function Workspace() {
                 <Label className="text-xs font-medium text-white/40 uppercase tracking-wider mb-2 block">
                   Claim Type
                 </Label>
-                <Select defaultValue="method">
+                <Select value={claimType} onValueChange={setClaimType}>
                   <SelectTrigger className="w-full bg-white/[0.04] border-white/[0.08] text-white/80 text-sm h-9 rounded-lg hover:border-white/20 transition-colors">
                     <SelectValue placeholder="Select claim type" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#1a1a2e] border-white/10">
-                    <SelectItem value="method">Method</SelectItem>
-                    <SelectItem value="apparatus">Apparatus</SelectItem>
-                    <SelectItem value="system">System</SelectItem>
-                    <SelectItem value="product">Product</SelectItem>
+                    <SelectItem value="Method">Method</SelectItem>
+                    <SelectItem value="Apparatus">Apparatus</SelectItem>
+                    <SelectItem value="System">System</SelectItem>
+                    <SelectItem value="Product">Product</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -131,10 +350,31 @@ export default function Workspace() {
                 Pipeline generates claim charts, translation tables, and response drafts.
               </p>
             </div>
-            <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white border-0 rounded-lg h-10 font-medium text-sm shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transition-all duration-300 group">
-              <Sparkles className="w-4 h-4 mr-2 group-hover:animate-spin" />
-              Execute Pipeline
-              <ChevronRight className="w-4 h-4 ml-1 opacity-60 group-hover:translate-x-0.5 transition-transform" />
+            {isExecuting && (
+              <div className="mb-3 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-white/50">Status</span>
+                  <span className="text-xs text-white/70 font-medium">{taskState || "PENDING"}</span>
+                </div>
+                <div className="mt-1 text-xs text-white/40 truncate">
+                  {queuePosition ? `Queued (Position ${queuePosition}${queueSize ? `/${queueSize}` : ""}) → ` : ""}
+                  {taskStep || "Queued"}
+                </div>
+              </div>
+            )}
+            {taskError && (
+              <div className="mb-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-200/90">
+                {taskError}
+              </div>
+            )}
+            <Button
+              onClick={handleExecute}
+              disabled={isExecuting}
+              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white border-0 rounded-lg h-10 font-medium text-sm shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transition-all duration-300 group"
+            >
+              <Sparkles className={`w-4 h-4 mr-2 ${isExecuting ? 'animate-spin' : 'group-hover:animate-spin'}`} />
+              {isExecuting ? 'Processing Document...' : 'Execute Pipeline'}
+              {!isExecuting && <ChevronRight className="w-4 h-4 ml-1 opacity-60 group-hover:translate-x-0.5 transition-transform" />}
             </Button>
           </div>
         </div>
@@ -181,62 +421,26 @@ export default function Workspace() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-5 align-top font-mono text-sm text-purple-400/80">1.1</td>
-                      <td className="px-6 py-5 align-top text-white/80 leading-relaxed">
-                        A method for wireless communication, comprising: transmitting a downlink control information (DCI) format;
-                      </td>
-                      <td className="px-6 py-5 align-top text-white/50 leading-relaxed">
-                        D1 discloses a base station transmitting resource allocation via a control channel (paragraph [0045]).
-                      </td>
-                      <td className="px-6 py-5 align-top">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-white/[0.06] text-white/50 border border-white/[0.08]">
-                          Disclosed
-                        </span>
-                      </td>
-                    </tr>
-                    <tr className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-5 align-top font-mono text-sm text-purple-400/80">1.2</td>
-                      <td className="px-6 py-5 align-top text-white/80 leading-relaxed">
-                        determining a timing offset K0 dynamically based on the received DCI format parameters;
-                      </td>
-                      <td className="px-6 py-5 align-top text-white/50 leading-relaxed">
-                        D1 utilizes a fixed timing offset via RRC signaling (paragraph [0052]). No dynamic DCI determination.
-                      </td>
-                      <td className="px-6 py-5 align-top">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                          Distinguishing
-                        </span>
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-5 align-top font-mono text-sm text-purple-400/80">1.3</td>
-                      <td className="px-6 py-5 align-top text-white/80 leading-relaxed">
-                        receiving a PDSCH based on the dynamically determined timing offset K0.
-                      </td>
-                      <td className="px-6 py-5 align-top text-white/50 leading-relaxed">
-                        D1 describes PDSCH reception based on a fixed scheduling timeline (FIG. 4).
-                      </td>
-                      <td className="px-6 py-5 align-top">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-white/[0.06] text-white/50 border border-white/[0.08]">
-                          Disclosed
-                        </span>
-                      </td>
-                    </tr>
-                    <tr className="border-t border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-5 align-top font-mono text-sm text-purple-400/80">1.4</td>
-                      <td className="px-6 py-5 align-top text-white/80 leading-relaxed">
-                        wherein the terminal device is configured to determine the timing offset based on DCI format characteristics.
-                      </td>
-                      <td className="px-6 py-5 align-top text-white/50 leading-relaxed">
-                        D1 does not disclose configuration for DCI-based timing offset determination at the terminal side.
-                      </td>
-                      <td className="px-6 py-5 align-top">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                          Distinguishing
-                        </span>
-                      </td>
-                    </tr>
+                    {(result?.claim_chart || []).length > 0 ? (
+                      (result?.claim_chart || []).map((row, idx) => (
+                        <tr key={`${row.feature_id || idx}`} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                          <td className="px-6 py-5 align-top font-mono text-sm text-purple-400/80">{row.feature_id || String(idx + 1)}</td>
+                          <td className="px-6 py-5 align-top text-white/80 leading-relaxed">{row.claim_limitation || ""}</td>
+                          <td className="px-6 py-5 align-top text-white/50 leading-relaxed">{row.d1_mapping || ""}</td>
+                          <td className="px-6 py-5 align-top">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-white/[0.06] text-white/50 border border-white/[0.08]">
+                              {row.d1_mapping && row.d1_mapping.trim() && row.d1_mapping.trim() !== "..." ? "Mapped" : "Pending"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-8 text-sm text-white/30">
+                          {isExecuting ? "Generating claim chart..." : "No claim chart yet. Execute pipeline to generate results."}
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -260,65 +464,42 @@ export default function Workspace() {
           <TabsContent value="verifier" className="mt-0">
             <div className="rounded-b-xl rounded-tr-xl border border-white/[0.06] border-t-0 bg-white/[0.02] backdrop-blur-sm overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead>
-                    <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-1/3">Original (CN)</th>
-                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-1/3">Translation (EN)</th>
-                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-1/3">Back-Translation (CN)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-5 align-top text-white/60 leading-relaxed">一种无线通信方法，包括：</td>
-                      <td className="px-6 py-5 align-top text-white/80 leading-relaxed">A method for wireless communication, comprising:</td>
-                      <td className="px-6 py-5 align-top text-white/50 leading-relaxed">一种用于无线通信的方法，包括：</td>
-                    </tr>
-                    <tr className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-5 align-top text-white/60 leading-relaxed">
-                        <span className="text-amber-400/90 underline decoration-amber-500/30 underline-offset-2">发送</span>下行控制信息DCI格式；
-                      </td>
-                      <td className="px-6 py-5 align-top text-white/80 leading-relaxed">
-                        <span className="bg-amber-500/15 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/20 text-xs font-medium">transmitting</span>{" "}
-                        a downlink control information (DCI) format;
-                      </td>
-                      <td className="px-6 py-5 align-top text-white/50 leading-relaxed">
-                        <span className="bg-amber-500/10 text-amber-400/80 px-1.5 py-0.5 rounded border border-amber-500/15 text-xs">传输</span>下行控制信息(DCI)格式；
-                      </td>
-                    </tr>
-                    <tr className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-5 align-top text-white/60 leading-relaxed">确定定时偏移量K0；</td>
-                      <td className="px-6 py-5 align-top text-white/80 leading-relaxed">determining a timing offset K0;</td>
-                      <td className="px-6 py-5 align-top text-white/50 leading-relaxed">确定定时偏移量K0；</td>
-                    </tr>
-                    <tr className="hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-5 align-top text-white/60 leading-relaxed">
-                        基于该定时偏移量<span className="text-amber-400/90 underline decoration-amber-500/30 underline-offset-2">接收</span>物理下行共享信道PDSCH。
-                      </td>
-                      <td className="px-6 py-5 align-top text-white/80 leading-relaxed">
-                        <span className="bg-amber-500/15 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/20 text-xs font-medium">receiving</span>{" "}
-                        a PDSCH based on the timing offset.
-                      </td>
-                      <td className="px-6 py-5 align-top text-white/50 leading-relaxed">
-                        基于该定时偏移量<span className="bg-amber-500/10 text-amber-400/80 px-1.5 py-0.5 rounded border border-amber-500/15 text-xs">接收</span>物理下行共享信道PDSCH。
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div className="border-t border-white/[0.06] bg-white/[0.02] px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-sm bg-amber-500/20 border border-amber-500/30" />
-                    <span className="text-xs text-white/40">Verb mismatch flagged</span>
-                  </div>
-                  <span className="text-xs text-white/30">|</span>
-                  <span className="text-xs text-amber-400/70 font-medium">2 discrepancies detected</span>
-                </div>
-                <Button variant="ghost" className="text-xs text-white/30 hover:text-white/60 h-8 px-3 gap-1.5">
-                  <Download className="w-3.5 h-3.5" />
-                  Export
-                </Button>
+                {(() => {
+                  const md = result?.translation_table_markdown || "";
+                  const rows = parseMarkdownPipeTable3(md);
+
+                  if (!rows.length) {
+                    return (
+                      <div className="p-6 text-sm text-white/30">
+                        {isExecuting ? "Generating translation verifier..." : "No verifier output yet."}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <table className="w-full text-sm text-left">
+                      <thead>
+                        <tr className="border-b border-white/[0.06] bg-white/[0.02]">
+                          <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-1/3">Original (CN)</th>
+                          <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-1/3">Target (EN)</th>
+                          <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-1/3">Back-Trans (CN)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((r, idx) => (
+                          <tr
+                            key={idx}
+                            className={`border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors ${r.hasRisk ? "bg-amber-500/5" : ""}`}
+                          >
+                            <td className="px-6 py-5 align-top text-white/60 leading-relaxed">{r.originalCn}</td>
+                            <td className="px-6 py-5 align-top text-white/80 leading-relaxed">{r.targetEn}</td>
+                            <td className={`px-6 py-5 align-top leading-relaxed ${r.hasRisk ? "text-amber-200" : "text-white/50"}`}>{r.backCn}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  );
+                })()}
               </div>
             </div>
           </TabsContent>
@@ -344,12 +525,11 @@ export default function Workspace() {
                   </div>
                 </div>
 
-                <p>Dear Examiner Tapaninen,</p>
-
-                <p className="text-white/70">
-                  The Applicant respectfully responds to the Office Action and submits the following observations
-                  regarding the inventive step objection under Art. 56 EPC against the independent method claim.
-                </p>
+                <textarea
+                  value={result?.response_draft || (isExecuting ? "Drafting response..." : "")}
+                  onChange={(e) => setResult((prev) => ({ ...(prev || {}), response_draft: e.target.value }))}
+                  className="w-full min-h-[420px] bg-white/[0.03] border border-white/[0.08] rounded-lg p-4 text-xs text-white/80 leading-relaxed font-mono"
+                />
 
                 <h3 className="font-semibold text-base mt-10 mb-3 text-white/90 flex items-center gap-2">
                   <span className="w-1 h-6 rounded-full bg-gradient-to-b from-purple-500 to-blue-500 inline-block" />

@@ -6,3 +6,7 @@ chromadb
 fastembed
 python-docx
 streamlit
+fastapi
+uvicorn
+celery
+redis
