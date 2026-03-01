@@ -6,7 +6,7 @@
 ![Queue: Redis](https://img.shields.io/badge/Queue-Redis-red)
 ![Privacy: 100% Local](https://img.shields.io/badge/Privacy-100%25%20Local%20LLM-red)
 
-**PatentFlow** is an enterprise-grade, privacy-first Document Processing Workspace with **async task queue architecture**. Designed for European Patent Attorneys, it handles concurrent document processing via Celery + Redis while maintaining 100% offline operation.
+**PatentFlow** is an enterprise-grade, privacy-first Document Processing Workspace featuring a robust **asynchronous task queue architecture**. Designed for European Patent Attorneys, it handles concurrent heavy-document processing via Celery + Redis while strictly maintaining 100% offline, air-gapped operation.
 
 *Built by an IP professional, for IP professionals.*
 
@@ -14,246 +14,104 @@
 
 ## 💡 The "Why" (Design Philosophy)
 
-After four years working as a Patent Assistant handling Telecommunications and Optics files, I observed three major bottlenecks:
+After four years of working as a Patent Assistant handling Telecommunications and Optics files, I observed three major bottlenecks in legal-tech adoption:
 
-1. **Client Confidentiality**: Public cloud AI is strictly prohibited for unpublished patent drafts.
-2. **Legal Hallucinations**: Standard LLMs fail to respect rigid EPO frameworks (Art. 123(2), Art. 56).
-3. **Concurrency & OOM**: Heavy LLM and document parsing tasks can timeout or exhaust memory when run synchronously.
+1. **Client Confidentiality**: Public cloud AI (ChatGPT, Claude) is strictly prohibited for unpublished patent drafts.
+2. **Legal Hallucinations**: Standard LLMs fail to respect rigid EPO frameworks (e.g., Art. 123(2) added matter, Art. 56 inventive step).
+3. **Concurrency & OOM**: Heavy local LLM inference and regex parsing can easily cause HTTP timeouts or exhaust GPU memory (OOM) when multiple attorneys use the tool synchronously.
 
 **PatentFlow** solves this with:
-- **100% offline local LLM** constrained by deterministic Python Agent Skills
-- **Async task queue** (Celery + Redis) for concurrent request handling
-- **Real-time progress tracking** with queue position display
-- **Minimalist Next.js UI** for heavy document reading
+- **100% offline local AI** constrained by deterministic Python Agent Skills.
+- **Async task queuing** (Celery + Redis) to gracefully handle firm-wide concurrent requests.
+- **Real-time UX** via an optimistic Next.js UI that prevents user anxiety during long LLM generations.
 
 ---
 
 ## 🏗️ System Architecture
 
+PatentFlow employs a decoupled microservices architecture, isolating the Next.js presentation layer from the heavy Python AI engine.
+
 ```mermaid
 graph TD
-    subgraph Frontend [Next.js 16 + Tailwind - Port 3000/3001]
-        UI[Workspace Dashboard] -->|POST /api/generate| API[FastAPI Backend :8000]
-        UI -->|GET /api/status/{task_id}| API
-        UI -.->|Renders| View1[Claim Chart Tab]
-        UI -.->|Renders| View2[Translation Verifier Tab]
-        UI -.->|Renders| View3[Response Draft Tab]
+    subgraph Frontend [Next.js Enterprise UI - Port 3000]
+        UI[Workspace Dashboard] -->|POST /api/generate| API[FastAPI Gateway :8000]
+        UI -->|GET /api/status/{id}| API
     end
 
     subgraph Backend [FastAPI + Celery Workers]
         API -->|Enqueue Task| Broker[(Redis Broker :6379)]
-        API -->|Store Results| BackendRedis[(Redis Result Backend)]
+        API -->|Fetch Result| BackendRedis[(Redis Backend)]
         
         Worker1[Celery Worker #1] -->|Consume| Broker
         Worker2[Celery Worker #2] -->|Consume| Broker
         
-        Worker1 -->|Execute| Skills[Agentic Skills]
+        Worker1 -->|Execute| Skills[Agentic Skills Engine]
         Worker2 -->|Execute| Skills
     end
 
-    subgraph SkillsEngine [PatentFlow Core Skills]
-        Skills --> S1[Dual-Verification Translator]
+    subgraph Privacy Layer [100% Offline AI Infrastructure]
+        Skills --> S1[Dual-Verification Module]
         Skills --> S2[Claim Chart Generator]
-        Skills --> S3[Response Draft Builder]
-        Skills --> LLM[(Local LLM Engine)]
+        Skills --> LLM[(Local LLM - Air-gapped)]
     end
 
     style Frontend fill:#f8fafc,stroke:#cbd5e1
     style Backend fill:#f0fdf4,stroke:#86efac
-    style SkillsEngine fill:#fef2f2,stroke:#fca5a5
-```
+    style Privacy Layer fill:#fef2f2,stroke:#fca5a5
 
-### Architecture Highlights
+✨ Core Capabilities (Agent Skills)
+Note: Specific system prompts, proprietary 3GPP mapping dictionaries, and core heuristic regex parsing algorithms are intentionally omitted from this public repository to protect the underlying intellectual logic. The demonstrable features include:
 
-| Component | Role | Port |
-|-----------|------|------|
-| **Next.js Frontend** | Attorney workspace UI | 3000/3001 |
-| **FastAPI Gateway** | REST API + CORS + Task enqueue | 8000 |
-| **Redis** | Message broker + Result backend | 6379 |
-| **Celery Workers** | Async task processors | - |
-| **Local LLM** | Offline AI inference | (internal) |
+1. Dual-Verification Translation (Art. 123(2) Mitigation)
+Generates a strict side-by-side alignment: Original CN | Target EN | Back-translated CN.
 
----
+Logic: Automatically flags verb-scope mismatches (e.g., "comprising" vs "consisting of") with amber highlights to prevent unallowable amendments.
 
-## ⚡ Async Task Flow
+2. Automated Claim Charting (Art. 56 Analysis)
+Maps specific claim features (1.1, 1.2...) to identified paragraphs in Prior Art (D1).
 
-```
-Browser (Next.js)
-    |
-    | POST /api/generate
-    v
-FastAPI Gateway -----> Redis Broker (ZSET queue)
-    |                       |
-    |                       | task picked up
-    |                       v
-    |<------------------ Celery Worker
-    |                       |
-    | GET /api/status/{id}  | execute + update_state
-    | (poll every 2s)       v
-    |<------------------ Redis Result Backend
-```
+Processes concurrently through the Celery worker pool, displaying real-time granular progress (Parsing → LLM Matching → Drafting).
 
-**Key Features:**
-- **Queue Position**: Redis Sorted Set (ZSET) for O(logN) position lookup
-- **Progress Steps**: `Queued → Parsing → LLM → Drafting → Success`
-- **Concurrent**: Multiple workers supported via `--concurrency=N`
+3. EPO Response Drafting
+Auto-generates formal response letters based on predefined examiner biases.
 
----
+Exports to clean, standard-compliant formatting.
 
-## ✨ Core Capabilities (Agent Skills)
+🚀 Quick Start (Local Deployment)
+Option A: Docker Compose (Recommended for Intranet)
+The entire asynchronous stack can be spun up using Docker.
 
-### 1. Dual-Verification Translation (Art. 123(2))
+Bash
+docker compose up --build -d
+Frontend: http://localhost:3000
 
-For Chinese priority applications:
-- **Alignment Table**: Original CN | Target EN | Back-translated CN
-- **Mismatch Detection**: Automatically flags verb-scope errors
-- **Risk Highlighting**: Amber background for discrepancies
+API Docs: http://localhost:8000/docs
 
-### 2. Automated Claim Charting (Art. 56)
+Option B: Manual Startup (For Development)
+Requires: Python 3.9+, Node.js 18+, Redis instance.
 
-- Maps claim features (1.1, 1.2...) to Prior Art paragraphs
-- Displays real-time progress: `Queued (Position 2/5) → Parsing → LLM → Drafting`
-- Supports concurrent batch processing
+Bash
+# 1. Start Redis Server
+redis-server
 
-### 3. EPO Response Drafting
+# 2. Start FastAPI Gateway
+REDIS_URL=redis://localhost:6379/0 uvicorn src.api:app --host 0.0.0.0 --port 8000
 
-- Auto-generates formal response letters
-- Editable textarea with examiner preference bias
-- Export-ready formatting
+# 3. Start Celery Worker
+REDIS_URL=redis://localhost:6379/0 celery -A src.celery_app.celery_app worker -l info
 
----
-
-## 🚀 Quick Start
-
-### Option A: Local Development (No Docker)
-
-Requires: Python 3.9+, Node.js 18+, Redis (Homebrew)
-
-#### 1. Install Redis
-```bash
-brew install redis
-brew services start redis
-redis-cli ping  # Should return PONG
-```
-
-#### 2. Setup Python Environment
-```bash
-cd /path/to/PatentFlow
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-#### 3. Start FastAPI (Terminal 1)
-```bash
-cd /path/to/PatentFlow
-source venv/bin/activate
-REDIS_URL=redis://localhost:6379/0 python3 -m uvicorn src.api:app --host 0.0.0.0 --port 8000
-```
-
-#### 4. Start Celery Worker (Terminal 2)
-```bash
-cd /path/to/PatentFlow
-source venv/bin/activate
-REDIS_URL=redis://localhost:6379/0 python3 -m celery -A src.celery_app.celery_app worker -l info --concurrency=1
-```
-
-#### 5. Start Next.js (Terminal 3)
-```bash
-cd /path/to/PatentFlow/frontend
-npm install
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev -- -p 3001
-```
-
-Open [http://localhost:3001](http://localhost:3001)
-
----
-
-### Option B: Docker Compose (Production-like)
-
-```bash
-docker compose up --build
-```
-
-Services:
-- Frontend: http://localhost:3000
-- API Docs: http://localhost:8000/docs
-- Redis: localhost:6379
-
----
-
-## 📡 API Reference
-
-### POST /api/generate
-Enqueue a new document processing task.
-
-**Request:**
-```json
-{
-  "office_action_text": "...",
-  "specification_text": "...",
-  "examiner_preference": "Jukka Tapaninen - Telecom",
-  "claim_type": "Method"
-}
-```
-
-**Response:**
-```json
-{
-  "task_id": "63627cdd-0508-4b1c-9b77-523193b51c21",
-  "queue_position": 1,
-  "queue_size": 3
-}
-```
-
-### GET /api/status/{task_id}
-Poll task status every 2 seconds.
-
-**Response (SUCCESS):**
-```json
-{
-  "task_id": "...",
-  "state": "SUCCESS",
-  "meta": {"step": "Drafting EPO Response"},
-  "result": {
-    "status": "success",
-    "claim_chart": [...],
-    "translation_table_markdown": "...",
-    "response_draft": "..."
-  }
-}
-```
-
----
-
-## 🎛️ Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `REDIS_URL` | `redis://localhost:6379/0` | Redis broker + backend |
-| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:8000` | FastAPI endpoint |
-
----
-
-## 📁 Project Structure
-
-```
+# 4. Start Next.js Frontend
+cd frontend && npm install && NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev
+📁 Project Structure
+Plaintext
 PatentFlow/
 ├── src/
 │   ├── api.py              # FastAPI endpoints + CORS
-│   ├── celery_app.py       # Celery configuration
-│   ├── tasks.py            # Async task definitions
-│   ├── skills.py           # Claim chart generator
-│   ├── translator.py       # Dual-verification logic
-│   └── pipeline.py         # Document orchestration
+│   ├── celery_app.py       # Celery & Redis configuration
+│   ├── tasks.py            # Async LLM task definitions
+│   └── skills.py           # Claim chart generator (Core logic omitted)
 ├── frontend/
-│   └── src/app/page.tsx    # Main workspace UI
-├── docker-compose.yml      # Full stack orchestration
-├── Dockerfile.api          # FastAPI container
-├── Dockerfile.worker       # Celery worker container
+│   └── src/app/page.tsx    # Optimistic Workspace UI
+├── docker-compose.yml      # Microservices orchestration
 └── requirements.txt
-```
-
----
-
-> **Disclaimer:** This project demonstrates the intersection of software engineering and patent prosecution. It assists, not replaces, the strategic judgment of a qualified European Patent Attorney.
+Disclaimer: This project demonstrates the intersection of software engineering and patent prosecution. It is designed to assist, not replace, the strategic judgment of a qualified European Patent Attorney.
