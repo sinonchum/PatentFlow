@@ -35,7 +35,7 @@ PatentFlow employs a decoupled microservices architecture, isolating the Next.js
 graph TD
     subgraph Frontend [Next.js Enterprise UI - Port 3000]
         UI[Workspace Dashboard] -->|POST /api/generate| API[FastAPI Gateway :8000]
-        UI -->|GET /api/status/[id]| API
+        UI -->|GET /api/status/:id| API
     end
 
     subgraph Backend [FastAPI + Celery Workers]
