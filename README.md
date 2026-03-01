@@ -69,15 +69,21 @@ graph TD
 ### 1. Dual-Verification Translation (Art. 123(2) Mitigation)
 Generates a strict side-by-side alignment: Original CN | Target EN | Back-translated CN.
 
+![Translation Verifier](docs/screenshots/verifier.png)
+
 **Logic**: Automatically flags verb-scope mismatches (e.g., "comprising" vs "consisting of") with amber highlights to prevent unallowable amendments.
 
 ### 2. Automated Claim Charting (Art. 56 Analysis)
 Maps specific claim features (1.1, 1.2...) to identified paragraphs in Prior Art (D1).
 
+![Claim Charting progress](docs/screenshots/claim_chart.png)
+
 Processes concurrently through the Celery worker pool, displaying real-time granular progress (Parsing → LLM Matching → Drafting).
 
 ### 3. EPO Response Drafting
 Auto-generates formal response letters based on predefined examiner biases.
+
+![EPO Response Drafting](docs/screenshots/response_draft.png)
 
 Exports to clean, standard-compliant formatting.
 
