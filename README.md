@@ -57,7 +57,7 @@ graph TD
 
     style Frontend fill:#f8fafc,stroke:#cbd5e1
     style Backend fill:#f0fdf4,stroke:#86efac
-    style Privacy Layer fill:#fef2f2,stroke:#fca5a5
+    style Privacy Layer fill:#fef2f2,stroke:#fca5a5 ```
 
 ✨ Core Capabilities (Agent Skills)
 Note: Specific system prompts, proprietary 3GPP mapping dictionaries, and core heuristic regex parsing algorithms are intentionally omitted from this public repository to protect the underlying intellectual logic. The demonstrable features include:
