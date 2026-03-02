@@ -26,9 +26,9 @@ jobs:
       - name: Lint with flake8
         # Stop the build if there are Python syntax errors or undefined names
         run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude venv,.ci-venv,frontend/node_modules,frontend/.next,frontend/out
           # exit-zero treats all errors as warnings.
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude venv,.ci-venv,frontend/node_modules,frontend/.next,frontend/out
 
   frontend-build:
     name: Next.js Build

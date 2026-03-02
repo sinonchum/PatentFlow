@@ -1,4 +1,5 @@
 venv/
+.ci-venv/
 .env
 private_knowledge_base/
 

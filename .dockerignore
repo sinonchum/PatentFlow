@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+.ci-venv/
+
+# Git
+.git/
+.gitignore
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Frontend build artifacts / deps
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Data / local persistence
+private_knowledge_base/
+data/
+chroma_db/
+.chroma/
+chromadb/
+
+# Env files
+.env

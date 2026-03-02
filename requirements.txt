@@ -5,7 +5,6 @@ python-epo-ops-client==4.2.0
 chromadb==0.5.11
 fastembed==0.3.6
 python-docx==1.1.2
-streamlit==1.39.0
 fastapi==0.115.2
 uvicorn[standard]==0.30.6
 celery==5.4.0
