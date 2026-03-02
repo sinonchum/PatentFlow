@@ -235,7 +235,11 @@ export default function Workspace() {
     if (!taskId || !isExecuting) return;
 
     let cancelled = false;
-    const interval = window.setInterval(async () => {
+    let timeoutId: number | null = null;
+    let delayMs = 2000;
+    const maxDelayMs = 10000;
+
+    const poll = async () => {
       try {
         const resp = await fetch(`${API_BASE}/api/status/${taskId}`);
         if (!resp.ok) {
@@ -279,7 +283,9 @@ export default function Workspace() {
         if (data.state === "SUCCESS") {
           setResult(data.result || null);
           setIsExecuting(false);
-          window.clearInterval(interval);
+          if (timeoutId !== null) {
+            window.clearTimeout(timeoutId);
+          }
           // Scroll to results section
           setTimeout(() => {
             const tabsSection = document.querySelector('section[class*="pb-16"]');
@@ -287,24 +293,40 @@ export default function Workspace() {
               tabsSection.scrollIntoView({ behavior: "smooth", block: "start" });
             }
           }, 100);
+          return;
         }
 
         if (data.state === "FAILURE") {
           setTaskError(data.error || "Task failed");
           setIsExecuting(false);
-          window.clearInterval(interval);
+          if (timeoutId !== null) {
+            window.clearTimeout(timeoutId);
+          }
+          return;
         }
+
+        // Schedule next poll with exponential backoff.
+        delayMs = Math.min(maxDelayMs, delayMs * 2);
+        timeoutId = window.setTimeout(poll, delayMs);
       } catch (e) {
         if (cancelled) return;
         setTaskError(e instanceof Error ? e.message : String(e));
         setIsExecuting(false);
-        window.clearInterval(interval);
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId);
+        }
       }
-    }, 2000);
+
+      // First poll delay: 2s
+    };
+
+    timeoutId = window.setTimeout(poll, delayMs);
 
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
     };
   }, [taskId, isExecuting, API_BASE]);
 

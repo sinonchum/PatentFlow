@@ -120,7 +120,7 @@ def _progress_fields(index: int, total: int = _SUBSTEP_TOTAL) -> Dict[str, int]:
     }
 
 
-@celery_app.task
+@celery_app.task(autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
 def parse_docs(
     *,
     office_action_text: str = "",
@@ -177,7 +177,7 @@ def parse_docs(
     }
 
 
-@celery_app.task
+@celery_app.task(autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
 def chunk_and_embed(context: Dict[str, Any]) -> Dict[str, Any]:
     workflow_id = str(context.get("workflow_id", ""))
     _set_workflow_meta(workflow_id, "Chunking & Embedding Prior Art", _progress_fields(2))
@@ -202,7 +202,7 @@ def chunk_and_embed(context: Dict[str, Any]) -> Dict[str, Any]:
     return context
 
 
-@celery_app.task
+@celery_app.task(autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
 def chart_features(context: Dict[str, Any]) -> Dict[str, Any]:
     workflow_id = str(context.get("workflow_id", ""))
     chart_meta = _progress_fields(3)
@@ -230,7 +230,7 @@ def chart_features(context: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-@celery_app.task
+@celery_app.task(autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
 def translate_align(context: Dict[str, Any]) -> Dict[str, Any]:
     workflow_id = str(context.get("workflow_id", ""))
     _set_workflow_meta(workflow_id, "Running Translation Dual-Verification", _progress_fields(3))
@@ -248,7 +248,7 @@ def translate_align(context: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-@celery_app.task
+@celery_app.task(autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
 def draft_response(parallel_outputs: List[Dict[str, Any]]) -> Dict[str, Any]:
     workflow_id = ""
     claim_chart: List[Dict[str, Any]] = []
@@ -311,7 +311,7 @@ def draft_response(parallel_outputs: List[Dict[str, Any]]) -> Dict[str, Any]:
     return _sanitize_backend_result(out)
 
 
-@celery_app.task(bind=True)
+@celery_app.task(bind=True, autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
 def run_patentflow_generate(
     self,
     *,
