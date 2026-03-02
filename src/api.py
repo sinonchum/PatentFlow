@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import json
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from celery.result import AsyncResult
 from fastapi import FastAPI
@@ -15,16 +16,32 @@ from src.tasks import run_patentflow_generate
 
 app = FastAPI(title="PatentFlow API", version="0.1.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+
+def _allowed_origins() -> List[str]:
+    raw = os.getenv("ALLOWED_ORIGINS", "").strip()
+    if raw:
+        origins = [o.strip() for o in raw.split(",") if o.strip()]
+        if origins:
+            return origins
+    return [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3001",
-    ],
+    ]
+
+
+def _json_size_bytes(obj: Any) -> int:
+    return len(json.dumps(obj, ensure_ascii=False, default=str).encode("utf-8"))
+
+
+_STATUS_RESPONSE_MAX_BYTES = int(os.getenv("STATUS_RESPONSE_MAX_BYTES", "262144"))
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allowed_origins(),
     allow_credentials=True,
-    allow_methods=["*"] ,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -60,6 +77,7 @@ def _redis_client() -> redis.Redis:
 
 _QUEUE_KEY = "patentflow:queue:z"
 _QUEUE_SEQ_KEY = "patentflow:queue:seq"
+_WORKFLOW_META_KEY_PREFIX = "patentflow:taskmeta:"
 
 
 @app.post("/api/generate", response_model=GenerateResponse)
@@ -99,6 +117,8 @@ def status(task_id: str) -> StatusResponse:
     meta: Optional[Dict[str, Any]] = None
     if isinstance(res.info, dict):
         meta = res.info
+    elif isinstance(res.info, str):
+        meta = {"detail": res.info}
 
     # Enrich meta with queue position, if available.
     if meta is None:
@@ -122,20 +142,71 @@ def status(task_id: str) -> StatusResponse:
     if queue_size is not None and res.state in {"PENDING", "PROGRESS", "STARTED"}:
         meta.setdefault("queue_size", queue_size)
 
+    # Fallback: workflow meta side-channel written by chain/chord subtasks.
+    try:
+        r = _redis_client()
+        raw_meta = r.get(f"{_WORKFLOW_META_KEY_PREFIX}{task_id}")
+        if raw_meta:
+            workflow_meta = json.loads(raw_meta)
+            if isinstance(workflow_meta, dict):
+                for k, v in workflow_meta.items():
+                    meta.setdefault(k, v)
+    except Exception:
+        pass
+
     payload = StatusResponse(task_id=task_id, state=res.state, meta=meta or None)
 
     if res.state == "SUCCESS":
+        if meta is not None:
+            meta.setdefault("percent", 100)
+            meta.setdefault("substep_index", meta.get("substep_total", 5))
         try:
             # Use res.result directly for completed tasks (avoid timeout issues with get())
             result_obj = res.result if res.result is not None else res.get(timeout=1)
             if isinstance(result_obj, dict):
-                payload.result = result_obj
+                result_size = _json_size_bytes(result_obj)
+                if result_size > _STATUS_RESPONSE_MAX_BYTES:
+                    payload.error = (
+                        f"RESULT_TOO_LARGE: {result_size} bytes exceeds "
+                        f"{_STATUS_RESPONSE_MAX_BYTES} bytes"
+                    )
+                    payload.result = {
+                        "status": "omitted",
+                        "reason": "Use artifact storage or dedicated download endpoint for large payloads.",
+                        "result_size_bytes": result_size,
+                        "max_response_bytes": _STATUS_RESPONSE_MAX_BYTES,
+                    }
+                else:
+                    payload.result = result_obj
             else:
-                payload.result = {"value": result_obj}
+                boxed = {"value": result_obj}
+                result_size = _json_size_bytes(boxed)
+                if result_size > _STATUS_RESPONSE_MAX_BYTES:
+                    payload.error = (
+                        f"RESULT_TOO_LARGE: {result_size} bytes exceeds "
+                        f"{_STATUS_RESPONSE_MAX_BYTES} bytes"
+                    )
+                    payload.result = {
+                        "status": "omitted",
+                        "reason": "Use artifact storage or dedicated download endpoint for large payloads.",
+                        "result_size_bytes": result_size,
+                        "max_response_bytes": _STATUS_RESPONSE_MAX_BYTES,
+                    }
+                else:
+                    payload.result = boxed
         except Exception as e:
-            payload.error = str(e)
+            payload.error = f"RESULT_DESERIALIZE_ERROR: {e}"
 
     if res.state == "FAILURE":
         payload.error = str(res.info)
+
+    if res.state in {"SUCCESS", "FAILURE", "REVOKED"}:
+        # Best-effort terminal cleanup for UX-only queue/meta keys.
+        try:
+            r = _redis_client()
+            r.zrem(_QUEUE_KEY, task_id)
+            r.delete(f"{_WORKFLOW_META_KEY_PREFIX}{task_id}")
+        except Exception:
+            pass
 
     return payload

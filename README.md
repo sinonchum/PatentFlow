@@ -67,14 +67,21 @@ graph TD
 > **Note**: Specific system prompts, proprietary 3GPP mapping dictionaries, and core heuristic regex parsing algorithms are intentionally omitted from this public repository to protect the underlying intellectual logic. The demonstrable features include:
 
 ### 1. Dual-Verification Translation (Art. 123(2) Mitigation)
-Generates a strict side-by-side alignment: Original CN | Target EN | Back-translated CN.
+Generates a strict side-by-side alignment: Original CN | Target EN | Reverse-Translation (CN).
 
 ![Translation Verifier](docs/screenshots/verifier.png)
 
 **Logic**: Automatically flags verb-scope mismatches (e.g., "comprising" vs "consisting of") with amber highlights to prevent unallowable amendments.
 
 ### 2. Automated Claim Charting (Art. 56 Analysis)
-Maps specific claim features (1.1, 1.2...) to identified paragraphs in Prior Art (D1).
+Builds a structured 5-column claim chart:
+- Feature ID
+- Claim Limitation
+- Prior Art
+- Assessment
+- System Remarks
+
+Prior-art mapping is dynamic: if Office Action text contains D1, D2, D3, D4..., the chart can map per feature to the most relevant cited document rather than a fixed single reference.
 
 ![Claim Charting progress](docs/screenshots/claim_chart.png)
 
@@ -98,6 +105,8 @@ The entire asynchronous stack can be spun up using Docker.
 docker compose up --build -d
 ```
 
+`docker-compose.yml` sets `NEXT_PUBLIC_API_BASE_URL=http://api:8000` so the frontend container can reach the API container on the Docker network.
+
 - **Frontend**: http://localhost:3000
 - **API Docs**: http://localhost:8000/docs
 
@@ -105,17 +114,26 @@ docker compose up --build -d
 **Requires**: Python 3.9+, Node.js 18+, Redis instance.
 
 ```bash
-# 1. Start Redis Server
+# 1. Install Python dependencies
+python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
+
+# 2. Initialize environment variables
+cp .env.example .env
+# If deploying behind intranet domains, set ALLOWED_ORIGINS in .env
+# e.g. ALLOWED_ORIGINS=https://patentflow.intra.example.com,https://patentflow-admin.intra.example.com
+
+# 3. Start Redis Server
 redis-server
 
-# 2. Start FastAPI Gateway
+# 4. Start FastAPI Gateway
 REDIS_URL=redis://localhost:6379/0 uvicorn src.api:app --host 0.0.0.0 --port 8000
 
-# 3. Start Celery Worker
+# 5. Start Celery Worker
 REDIS_URL=redis://localhost:6379/0 celery -A src.celery_app.celery_app worker -l info
 
-# 4. Start Next.js Frontend
-cd frontend && npm install && NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev
+# 6. Start Next.js Frontend
+cd frontend && cp .env.local.example .env.local && npm install && npm run dev
 ```
 
 ---
@@ -132,7 +150,8 @@ PatentFlow/
 ├── frontend/
 │   └── src/app/page.tsx    # Optimistic Workspace UI
 ├── docker-compose.yml      # Microservices orchestration
-└── requirements.txt
+├── requirements.txt        # Runtime dependencies (pinned)
+└── requirements-dev.txt    # Dev/test/tooling dependencies (pinned)
 ```
 
 ---

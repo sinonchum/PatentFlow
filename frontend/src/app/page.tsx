@@ -12,20 +12,33 @@ type TaskState = "PENDING" | "STARTED" | "PROGRESS" | "SUCCESS" | "FAILURE";
 type ClaimChartRow = {
   feature_id?: string;
   claim_limitation?: string;
+  disclosure?: string;
+  assessment?: string;
+  attorney_remarks?: string;
+  prior_art_mapping?: string;
+  evidence_source?: string;
+  status?: string;
   d1_mapping?: string;
 };
 
 type TaskResult = {
   status?: string;
   claim_chart?: ClaimChartRow[];
+  cited_docs?: string[];
   translation_table_markdown?: string;
+  translation_rows?: Array<{
+    original_cn?: string;
+    target_en?: string;
+    back_cn?: string;
+    has_risk?: boolean;
+  }>;
   response_draft?: string;
 };
 
 type StatusResponse = {
   task_id: string;
   state: TaskState | string;
-  meta?: { step?: string; [k: string]: unknown } | null;
+  meta?: { step?: string; percent?: number; substep_index?: number; substep_total?: number; [k: string]: unknown } | null;
   result?: TaskResult | null;
   error?: string | null;
 };
@@ -80,6 +93,9 @@ export default function Workspace() {
   const [taskStep, setTaskStep] = useState<string>("");
   const [queuePosition, setQueuePosition] = useState<number | null>(null);
   const [queueSize, setQueueSize] = useState<number | null>(null);
+  const [taskPercent, setTaskPercent] = useState<number>(0);
+  const [taskSubstepIndex, setTaskSubstepIndex] = useState<number | null>(null);
+  const [taskSubstepTotal, setTaskSubstepTotal] = useState<number | null>(null);
   const [taskError, setTaskError] = useState<string | null>(null);
   const [result, setResult] = useState<TaskResult | null>(null);
 
@@ -94,6 +110,9 @@ export default function Workspace() {
     setTaskStep("Queued");
     setQueuePosition(null);
     setQueueSize(null);
+    setTaskPercent(0);
+    setTaskSubstepIndex(0);
+    setTaskSubstepTotal(5);
 
     try {
       const resp = await fetch(`${API_BASE}/api/generate`, {
@@ -165,8 +184,24 @@ export default function Workspace() {
           setQueueSize(qs);
         }
 
+        const percent = data?.meta?.percent;
+        if (typeof percent === "number") {
+          setTaskPercent(Math.max(0, Math.min(100, percent)));
+        }
+
+        const substepIndex = data?.meta?.substep_index;
+        if (typeof substepIndex === "number") {
+          setTaskSubstepIndex(substepIndex);
+        }
+
+        const substepTotal = data?.meta?.substep_total;
+        if (typeof substepTotal === "number") {
+          setTaskSubstepTotal(substepTotal);
+        }
+
         if (data.state === "SUCCESS") {
           console.log('[Debug] Task SUCCESS, result:', data.result);
+          setTaskPercent(100);
           setResult(data.result || null);
           setIsExecuting(false);
           window.clearInterval(interval);
@@ -360,6 +395,18 @@ export default function Workspace() {
                   {queuePosition ? `Queued (Position ${queuePosition}${queueSize ? `/${queueSize}` : ""}) → ` : ""}
                   {taskStep || "Queued"}
                 </div>
+                <div className="mt-2 h-1.5 w-full rounded-full bg-white/[0.08] overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-500"
+                    style={{ width: `${taskPercent}%` }}
+                  />
+                </div>
+                <div className="mt-1 text-[10px] text-white/35">
+                  {taskSubstepIndex !== null && taskSubstepTotal !== null
+                    ? `Step ${taskSubstepIndex}/${taskSubstepTotal}`
+                    : "Step progress pending"}
+                  <span className="ml-1">({taskPercent}%)</span>
+                </div>
               </div>
             )}
             {taskError && (
@@ -416,8 +463,11 @@ export default function Workspace() {
                     <tr className="border-b border-white/[0.06] bg-white/[0.02]">
                       <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-16">ID</th>
                       <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest">Claim Limitation</th>
-                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest">Prior Art (D1)</th>
-                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-36">Status</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest">
+                        Prior Art
+                      </th>
+                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-40">Assessment</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest">System Remarks</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -426,17 +476,28 @@ export default function Workspace() {
                         <tr key={`${row.feature_id || idx}`} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
                           <td className="px-6 py-5 align-top font-mono text-sm text-purple-400/80">{row.feature_id || String(idx + 1)}</td>
                           <td className="px-6 py-5 align-top text-white/80 leading-relaxed">{row.claim_limitation || ""}</td>
-                          <td className="px-6 py-5 align-top text-white/50 leading-relaxed">{row.d1_mapping || ""}</td>
+                          <td className="px-6 py-5 align-top text-white/50 leading-relaxed">{row.disclosure || row.prior_art_mapping || row.d1_mapping || "Not disclosed."}</td>
                           <td className="px-6 py-5 align-top">
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-white/[0.06] text-white/50 border border-white/[0.08]">
-                              {row.d1_mapping && row.d1_mapping.trim() && row.d1_mapping.trim() !== "..." ? "Mapped" : "Pending"}
+                            <span
+                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                                (row.assessment || row.status || "").includes("✅")
+                                  ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                                  : (row.assessment || row.status || "").includes("⚠️")
+                                  ? "bg-amber-500/10 text-amber-200 border-amber-500/30"
+                                  : "bg-rose-500/10 text-rose-200 border-rose-500/30"
+                              }`}
+                            >
+                              {row.assessment || row.status || "❌ No"}
                             </span>
+                          </td>
+                          <td className="px-6 py-5 align-top text-white/60 leading-relaxed text-xs">
+                            {row.attorney_remarks || "No notes."}
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={4} className="px-6 py-8 text-sm text-white/30">
+                        <td colSpan={5} className="px-6 py-8 text-sm text-white/30">
                           {isExecuting ? "Generating claim chart..." : "No claim chart yet. Execute pipeline to generate results."}
                         </td>
                       </tr>
@@ -449,7 +510,8 @@ export default function Workspace() {
                 <div className="flex items-center gap-3">
                   <Shield className="w-4 h-4 text-emerald-400/80" />
                   <span className="text-xs text-white/50">
-                    <span className="text-emerald-400 font-medium">2 distinguishing features</span> identified over D1 supporting inventive step under Art. 56 EPC
+                    <span className="text-emerald-400 font-medium">{(result?.claim_chart || []).length} features</span>
+                    {" "}mapped against {(result?.cited_docs || []).join(", ") || "prior art references"} under Art. 56 EPC
                   </span>
                 </div>
                 <Button variant="ghost" className="text-xs text-white/30 hover:text-white/60 h-8 px-3 gap-1.5">
@@ -465,8 +527,14 @@ export default function Workspace() {
             <div className="rounded-b-xl rounded-tr-xl border border-white/[0.06] border-t-0 bg-white/[0.02] backdrop-blur-sm overflow-hidden">
               <div className="overflow-x-auto">
                 {(() => {
+                  const structured = (result?.translation_rows || []).map((r) => ({
+                    originalCn: r.original_cn || "",
+                    targetEn: r.target_en || "",
+                    backCn: r.back_cn || "",
+                    hasRisk: Boolean(r.has_risk),
+                  }));
                   const md = result?.translation_table_markdown || "";
-                  const rows = parseMarkdownPipeTable3(md);
+                  const rows = structured.length > 0 ? structured : parseMarkdownPipeTable3(md);
 
                   if (!rows.length) {
                     return (
@@ -482,7 +550,7 @@ export default function Workspace() {
                         <tr className="border-b border-white/[0.06] bg-white/[0.02]">
                           <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-1/3">Original (CN)</th>
                           <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-1/3">Target (EN)</th>
-                          <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-1/3">Back-Trans (CN)</th>
+                          <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-1/3">Reverse-Translation (CN)</th>
                         </tr>
                       </thead>
                       <tbody>

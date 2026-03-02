@@ -1,10 +1,14 @@
 import json
 from pathlib import Path
 
-from src.data_processor import PatentParser
-
 
 def main() -> None:
+    try:
+        from src.data_processor import PatentParser
+    except Exception as e:
+        print(f"Skipping PDF parsing run: unavailable dependency/runtime ({e})")
+        return
+
     raw_dir = Path("data/raw")
     if not raw_dir.exists():
         print("Missing data/raw directory. Create it and put example PDFs inside.")
