@@ -1,0 +1,43 @@
+EUROPEAN PATENT OFFICE
+80298 MUNICH
+GERMANY
+
+Application No.: EP 21 158 904.2
+Applicant: Telecom Innovations AB
+Date: 02.03.2026
+
+Communication pursuant to Article 94(3) EPC
+
+The examination is being carried out on the following application documents:
+Description, Pages 1-25, as originally filed.
+Claims 1-15, filed with entry into the regional phase.
+
+Reference is made to the following documents:
+D1: US 2019/0123456 A1 (NOKIA TECHNOLOGIES OY) 15 April 2019
+D2: TS 38.214, "NR; Physical layer procedures for data (Release 15)", 3GPP, V15.2.0, June 2018
+
+1. Article 84 EPC - Clarity
+1.1 Claim 1 specifies "a timing offset configured to be substantially small". The term "substantially small" is vague and undefined, leaving the reader in doubt as to the actual scope of the timing offset. The claim therefore lacks clarity (Article 84 EPC).
+1.2 In claim 3, reference is made to "the HARQ-ACK feedback". However, there is no antecedent basis for this feature in claim 1, on which claim 3 depends.
+
+2. Article 52(1) and 56 EPC - Inventive Step
+2.1 The present application relates to a method for scheduling a Physical Downlink Shared Channel (PDSCH) using Downlink Control Information (DCI).
+2.2 Document D1 is regarded as being the prior art closest to the subject-matter of claim 1, and discloses (references in parentheses applying to this document):
+A method for wireless communication performed by a terminal device (Paragraph [0012]), comprising:
+- receiving a Downlink Control Information, DCI, scheduling a PDSCH (Paragraph [0045], "the base station transmits a control message to schedule downlink data");
+- receiving the PDSCH based on the DCI (Paragraph [0047]).
+
+2.3 The subject-matter of claim 1 therefore differs from D1 in that:
+the DCI comprises a dynamic timing offset field, wherein the dynamic timing offset field indicates a time gap K0 between the DCI and the scheduled PDSCH, and wherein K0 is determined based on a reported UE processing capability.
+
+2.4 The objective technical problem to be solved by this distinguishing feature may therefore be regarded as: How to optimize scheduling latency for different terminal devices.
+
+2.5 The solution proposed in claim 1 cannot be considered as involving an inventive step (Article 56 EPC). 
+Document D2 (Section 5.1.2.1) represents common general knowledge in the field of 5G NR. D2 already explicitly discloses the use of a time domain resource assignment field in the DCI to indicate a time gap K0. The skilled person, faced with the objective technical problem of optimizing latency, would readily apply the teaching of D2 to the system of D1, and configure the base station to adjust K0 based on known UE categories, arriving at the claimed solution without exercising inventive skill.
+
+3. Conclusion
+The application does not meet the requirements of the EPC. The applicant is invited to file observations and/or submit amended claims to overcome the objections raised above within a period of 4 months.
+
+Examining Division
+Jukka Tapaninen
+Primary Examiner

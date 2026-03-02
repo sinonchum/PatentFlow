@@ -10,8 +10,39 @@ from celery import chain, chord
 import redis
 
 from src.celery_app import celery_app
-from src.skills import generate_claim_chart
-from src.translator import PatentTranslator
+from src.skills import ClaimChartGenerator, TranslationVerifier
+from src.translator import PatentTranslator  # Keep for backward compat fallback
+
+
+# Legacy adapter functions for backward compatibility
+def generate_claim_chart(claim_text: str, prior_art_text: str, office_action_text: str = "") -> Dict[str, Any]:
+    """Backward-compatible adapter using new ClaimChartGenerator skill."""
+    generator = ClaimChartGenerator()
+    result = generator.execute(
+        claim_text=claim_text,
+        prior_art_text=prior_art_text,
+        office_action_text=office_action_text
+    )
+    # Map new field names to legacy format expected by frontend
+    chart_data = result.data.get("chart", [])
+    legacy_chart = []
+    for row in chart_data:
+        legacy_chart.append({
+            "feature_id": row.get("feature_id", ""),
+            "claim_limitation": row.get("limitation", ""),
+            "disclosure": row.get("d1_disclosure", ""),
+            "assessment": row.get("assessment", ""),
+            "attorney_remarks": row.get("remarks", ""),
+            "prior_art_mapping": row.get("d1_disclosure", ""),
+            "status": row.get("assessment", ""),
+            "evidence_source": "D1",
+            "d1_mapping": row.get("d1_disclosure", ""),
+        })
+    return {
+        "status": result.status,
+        "claim_chart": legacy_chart,
+        "cited_docs": result.data.get("cited_docs", []),
+    }
 
 
 def _redis_url() -> str:
@@ -114,10 +145,21 @@ def parse_docs(
     )
     if specification_text and len(specification_text.strip()) > 20:
         claim_text = specification_text.strip()
+    
     prior_art_text = "D1 discloses a wireless communication system with fixed timing relations."
     if specification_text and len(specification_text) > 50:
         prior_art_text = (specification_text[:200] + "...").replace("\n", " ")
-
+    
+    # Load mock office action if none provided (for demo purposes)
+    if not office_action_text:
+        try:
+            mock_path = os.path.join(os.path.dirname(__file__), "..", "mock_office_action_ep.txt")
+            if os.path.exists(mock_path):
+                with open(mock_path, "r", encoding="utf-8") as f:
+                    office_action_text = f.read()
+        except Exception:
+            pass  # Fallback to empty if file not readable
+    
     cn_text = (
         office_action_text.strip()
         if any("\u4e00" <= ch <= "\u9fff" for ch in office_action_text)

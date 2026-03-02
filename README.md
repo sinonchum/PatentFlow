@@ -1,35 +1,40 @@
-# ⚖️ PatentFlow: Async Patent Prosecution Workspace
+# ⚖️ PatentFlow: Agentic Patent Prosecution Workspace
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Frontend: Next.js](https://img.shields.io/badge/Frontend-Next.js%20%7C%20Tailwind-black)
 ![Backend: FastAPI](https://img.shields.io/badge/Backend-FastAPI%20%7C%20Celery-green)
-![Queue: Redis](https://img.shields.io/badge/Queue-Redis-red)
-![Privacy: 100% Local](https://img.shields.io/badge/Privacy-100%25%20Local%20LLM-red)
+![AI Engine: Local LLM](https://img.shields.io/badge/AI_Engine-100%25%20Offline%20LLM-red)
 
-**PatentFlow** is an enterprise-grade, privacy-first Document Processing Workspace featuring a robust **asynchronous task queue architecture**. Designed for European Patent Attorneys, it handles concurrent heavy-document processing via Celery + Redis while strictly maintaining 100% offline, air-gapped operation.
+**PatentFlow** is an enterprise-grade, privacy-first Document Processing Workspace. Designed strictly for European Patent Attorneys, it handles heavy-document processing via an **asynchronous task queue (Celery + Redis)** and deterministic Python Agent Skills, while strictly maintaining 100% offline, air-gapped operation for client confidentiality.
 
 *Built by an IP professional, for IP professionals.*
 
 ---
 
+> 🎥 **[Watch the 2-Minute Architecture & UI Demo Here]** *(Add your Loom/YouTube link here)*
+> 
+> ![PatentFlow UI Screenshot](https://via.placeholder.com/800x400.png?text=Insert+High-Res+Next.js+Dark+Mode+Screenshot+Here) *(Replace with your actual UI screenshot)*
+
+---
+
 ## 💡 The "Why" (Design Philosophy)
 
-After four years of working as a Patent Assistant handling Telecommunications and Optics files, I observed three major bottlenecks in legal-tech adoption:
+After four years of working as a Patent Assistant handling Telecommunications and Optics files, I observed three major bottlenecks in LegalTech adoption:
 
 1. **Client Confidentiality**: Public cloud AI (ChatGPT, Claude) is strictly prohibited for unpublished patent drafts.
-2. **Legal Hallucinations**: Standard LLMs fail to respect rigid EPO frameworks (e.g., Art. 123(2) added matter, Art. 56 inventive step).
+2. **Legal Hallucinations**: Standard LLMs fail to respect rigid EPO frameworks. They hallucinate differences between "comprising" and "consisting of" (fatal for Art. 123(2)) and struggle to map specific features to Prior Art (Art. 56).
 3. **Concurrency & OOM**: Heavy local LLM inference and regex parsing can easily cause HTTP timeouts or exhaust GPU memory (OOM) when multiple attorneys use the tool synchronously.
 
 **PatentFlow** solves this with:
-- **100% offline local AI** constrained by deterministic Python Agent Skills.
+- **100% offline local AI** constrained by deterministic Python OOP structures.
 - **Async task queuing** (Celery + Redis) to gracefully handle firm-wide concurrent requests.
 - **Real-time UX** via an optimistic Next.js UI that prevents user anxiety during long LLM generations.
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ System Architecture & Asynchronous Flow
 
-PatentFlow employs a decoupled microservices architecture, isolating the Next.js presentation layer from the heavy Python AI engine.
+PatentFlow employs a decoupled microservices architecture. Heavy LLM reasoning is offloaded to background workers, allowing the UI to remain highly responsive.
 
 ```mermaid
 graph TD
@@ -62,78 +67,61 @@ graph TD
 
 ---
 
-## ✨ Core Capabilities (Agent Skills)
+## ✨ Core Capabilities (The Agent Skills)
 
-> **Note**: Specific system prompts, proprietary 3GPP mapping dictionaries, and core heuristic regex parsing algorithms are intentionally omitted from this public repository to protect the underlying intellectual logic. The demonstrable features include:
+> **Note**: Specific LLM system prompts, proprietary 3GPP mapping dictionaries, and core heuristic regex parsing algorithms are intentionally omitted from this public repository to protect the underlying intellectual logic. The demonstrable features include:
 
-### 1. Dual-Verification Translation (Art. 123(2) Mitigation)
-Generates a strict side-by-side alignment: Original CN | Target EN | Reverse-Translation (CN).
+### 1. Dual-Verification Translator (Art. 123(2) Mitigation)
+**Architecture**: A deterministic checker bypassing the LLM.
 
-![Translation Verifier](docs/screenshots/verifier.png)
+![Translation Verifier](./docs/screenshots/verifier.png)
 
-**Logic**: Automatically flags verb-scope mismatches (e.g., "comprising" vs "consisting of") with amber highlights to prevent unallowable amendments.
+**Logic**: It cross-references the English translation against the Chinese original using a hardcoded legal glossary. It automatically flags lethal verb-scope mismatches (e.g., translating "包括" as the closed-ended "consisting of" instead of "comprising") with critical amber warnings to prevent unallowable amendments.
 
 ### 2. Automated Claim Charting (Art. 56 Analysis)
-Builds a structured 5-column claim chart:
-- Feature ID
-- Claim Limitation
-- Prior Art
-- Assessment
-- System Remarks
+**Architecture**: A hybrid Heuristic + LLM approach.
 
-Prior-art mapping is dynamic: if Office Action text contains D1, D2, D3, D4..., the chart can map per feature to the most relevant cited document rather than a fixed single reference.
+![Claim Chart](./docs/screenshots/claim_chart.png)
 
-![Claim Charting progress](docs/screenshots/claim_chart.png)
+**Logic**:
 
-Processes concurrently through the Celery worker pool, displaying real-time granular progress (Parsing → LLM Matching → Drafting).
+- **Tokenizer**: A deterministic Python parser splits independent claims into specific features (e.g., 1.1, 1.2) using transitional phrases.
+- **Evaluator**: The local LLM is then prompted feature-by-feature to locate the exact disclosure in the Prior Art (D1), returning structured JSON (`assessment`: Yes/No/Partial, `d1_disclosure`: "Paragraph [0045]").
 
 ### 3. EPO Response Drafting
-Auto-generates formal response letters based on predefined examiner biases.
+Auto-generates formal response letters based on predefined examiner biases. Exports to clean, standard-compliant formatting.
 
-![EPO Response Drafting](docs/screenshots/response_draft.png)
-
-Exports to clean, standard-compliant formatting.
+![EPO Response Draft](./docs/screenshots/response_draft.png)
 
 ---
 
 ## 🚀 Quick Start (Local Deployment)
 
-### Option A: Docker Compose (Recommended for Intranet)
-The entire asynchronous stack can be spun up using Docker.
+### Option A: Docker Compose (Production-like)
+The entire asynchronous stack (UI, API, Redis, Celery) can be spun up using Docker.
 
 ```bash
 docker compose up --build -d
 ```
 
-`docker-compose.yml` sets `NEXT_PUBLIC_API_BASE_URL=http://api:8000` so the frontend container can reach the API container on the Docker network.
-
 - **Frontend**: http://localhost:3000
-- **API Docs**: http://localhost:8000/docs
+- **API Docs (Swagger UI)**: http://localhost:8000/docs
 
 ### Option B: Manual Startup (For Development)
 **Requires**: Python 3.9+, Node.js 18+, Redis instance.
 
 ```bash
-# 1. Install Python dependencies
-python -m pip install -r requirements.txt
-python -m pip install -r requirements-dev.txt
-
-# 2. Initialize environment variables
-cp .env.example .env
-# If deploying behind intranet domains, set ALLOWED_ORIGINS in .env
-# e.g. ALLOWED_ORIGINS=https://patentflow.intra.example.com,https://patentflow-admin.intra.example.com
-
-# 3. Start Redis Server
+# 1. Start Redis Server
 redis-server
 
-# 4. Start FastAPI Gateway
+# 2. Start FastAPI Gateway
 REDIS_URL=redis://localhost:6379/0 uvicorn src.api:app --host 0.0.0.0 --port 8000
 
-# 5. Start Celery Worker
+# 3. Start Celery Worker
 REDIS_URL=redis://localhost:6379/0 celery -A src.celery_app.celery_app worker -l info
 
-# 6. Start Next.js Frontend
-cd frontend && cp .env.local.example .env.local && npm install && npm run dev
+# 4. Start Next.js Frontend
+cd frontend && npm install && NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev
 ```
 
 ---
@@ -146,32 +134,26 @@ PatentFlow/
 │   ├── api.py              # FastAPI endpoints + CORS
 │   ├── celery_app.py       # Celery & Redis configuration
 │   ├── tasks.py            # Async LLM task definitions
-│   └── skills.py           # Claim chart generator (Core logic omitted)
+│   └── skills/             # Agent Skills (ClaimChart, Verifier)
+│       ├── __init__.py
+│       ├── base.py         # SkillResult envelope
+│       ├── claim_chart.py  # Art. 56 Claim Chart Generator
+│       └── verifier.py     # Art. 123(2) Translation Verifier
 ├── frontend/
-│   └── src/app/page.tsx    # Optimistic Workspace UI
+│   └── src/app/page.tsx    # Next.js Workspace UI
 ├── docker-compose.yml      # Microservices orchestration
-├── requirements.txt        # Runtime dependencies (pinned)
-└── requirements-dev.txt    # Dev/test/tooling dependencies (pinned)
+└── requirements.txt        # Python dependencies
 ```
 
 ---
 
-## 🗺️ Roadmap (Upcoming Features)
+## 🗺️ Roadmap (Upcoming Features for v2.0)
 
-### 1. Local RAG Architecture (ChromaDB / FAISS)
-Currently, evaluating long (100+ pages) 3GPP TS documents directly through the LLM causes context-window overflow and GPU OOM.
-- **Action Plan**: Introduce a local Vector Database (ChromaDB) to our FastAPI backend. The system will chunk prior-art documents and embed them locally. When evaluating specific claims (e.g., Feature 1.1), the AI retrieves only the Top-3 relevant paragraphs.
-- **Business Value**: *"In real-world prosecution, standard documents are hundreds of pages long. Local RAG slashes GPU VRAM costs, stops hallucinations (the AI retrieves, rather than reconstructs), and provides exact source citations for the attorney."*
+- [ ] **Local RAG Integration**: Implement ChromaDB to chunk and index massive 3GPP Technical Specifications (e.g., TS 38.214) before feeding them to the LLM, drastically reducing GPU VRAM usage and eliminating context-window hallucination.
 
-### 2. Native Docx / EPO-XML Export
-Attorneys do not deliver web pages; they deliver formal tracked-change Word documents or EPO-compliant XML files.
-- **Action Plan**: Integrate `python-docx` into the backend and an "Export to .docx" functionality in the Next.js UI.
-- **Business Value**: *"This tool does not change an attorney's habits; it augments them. Auto-generated Art. 56 Claim Charts or Response drafts can be downloaded directly as .docx. From there, the attorney switches on 'Track Changes' for final polish, enabling a seamless handoff from AI to human."*
+- [ ] **.Docx Export Workflow**: Integrate `python-docx` to allow attorneys to export the generated Claim Charts and Office Action responses directly into MS Word with Track Changes enabled, ensuring seamless integration into existing firm workflows.
 
-### 3. CI/CD & Robust Workflows
-As the codebase scales, enforcing quality and smooth handoffs is critical.
-- **Action Plan**: Add GitHub Actions `.github/workflows/main.yml` to automatically run Python `flake8` linting and Next.js `npm run build` upon every commit.
-- **Business Value**: *"The architecture is designed with enterprise-grade CI/CD pipelines from day one. This guarantees that as the team grows, automated code quality checks and deployments are strictly monitored."*
+- [ ] **Streaming Responses**: Upgrade the FastAPI/Celery link to support Server-Sent Events (SSE) for real-time typewriter-effect rendering in the Next.js UI.
 
 ---
 

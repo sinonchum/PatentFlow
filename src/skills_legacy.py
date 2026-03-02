@@ -1,4 +1,4 @@
-from __future__ import annotations
+PLACEHOLDER_FOR_RENAME
 
 import re
 from typing import Any, Dict, List, Sequence
@@ -60,6 +60,35 @@ def _extract_refs(text: str) -> List[str]:
             seen.add(rr)
             out.append(rr)
     return out
+
+
+def _format_disclosure(*, doc_id: str, snippet: str, refs: List[str]) -> str:
+    s = (snippet or "").strip()
+    s = re.sub(r"\s+", " ", s)
+    # Avoid duplicated leading phrases in disclosure column.
+    s = re.sub(rf"(?i)^(?:\s*{re.escape(doc_id)}\s+discloses\s+)+", "", s)
+    # Remove wrapping quotes if present.
+    s = s.strip().strip('"').strip("'")
+    s = s.rstrip(" .")
+
+    # If the snippet already contains an explicit reference marker, don't append another.
+    if re.search(r"\(\s*(paragraph|see)\s+[^)]+\)", s, flags=re.IGNORECASE):
+        return f"{doc_id} discloses {s}."
+
+    ref = refs[0] if refs else ""
+    suffix = "."
+    if ref and ref.startswith("["):
+        # Avoid repeating the same paragraph reference if it is already present in snippet.
+        s_clean = re.sub(r"\(\s*paragraph\s+\[[0-9]{3,4}\]\s*\)", "", s, flags=re.IGNORECASE).strip().rstrip(" .")
+        if re.search(re.escape(ref), s, flags=re.IGNORECASE):
+            return f"{doc_id} discloses {s_clean}{suffix}"
+        return f"{doc_id} discloses {s_clean} (paragraph {ref}){suffix}"
+    if ref:
+        s_clean = re.sub(r"\(\s*see\s+[^)]+\)", "", s, flags=re.IGNORECASE).strip().rstrip(" .")
+        if re.search(re.escape(ref), s, flags=re.IGNORECASE):
+            return f"{doc_id} discloses {s_clean}{suffix}"
+        return f"{doc_id} discloses {s_clean} (see {ref}){suffix}"
+    return f"{doc_id} discloses {s}{suffix}"
 
 
 def _best_snippet_for_feature(feature: str, snippets: Sequence[str]) -> str:
@@ -165,7 +194,7 @@ def generate_claim_chart(claim_text: str, prior_art_text: str, office_action_tex
                 looks_static_in_doc=looks_static_in_doc,
             )
         elif overlap >= 2 and refs:
-            disclosure = f'{selected_doc} {refs[0]} "{snippet_clean}"' if refs else f'{selected_doc} "{snippet_clean}"'
+            disclosure = _format_disclosure(doc_id=selected_doc, snippet=snippet_clean, refs=refs)
             assessment = "✅ Yes"
             remarks = _compose_attorney_remark(
                 feature=feature,
@@ -175,7 +204,7 @@ def generate_claim_chart(claim_text: str, prior_art_text: str, office_action_tex
                 looks_static_in_doc=looks_static_in_doc,
             )
         elif overlap >= 2 and not refs:
-            disclosure = f'{selected_doc} "{snippet_clean}"'
+            disclosure = _format_disclosure(doc_id=selected_doc, snippet=snippet_clean, refs=[])
             assessment = "✅ Yes"
             remarks = _compose_attorney_remark(
                 feature=feature,
@@ -185,7 +214,7 @@ def generate_claim_chart(claim_text: str, prior_art_text: str, office_action_tex
                 looks_static_in_doc=looks_static_in_doc,
             )
         elif overlap >= 1 and refs:
-            disclosure = f'{selected_doc} {refs[0]} "{snippet_clean}"' if refs else f'{selected_doc} "{snippet_clean}"'
+            disclosure = _format_disclosure(doc_id=selected_doc, snippet=snippet_clean, refs=refs)
             assessment = "⚠️ Partial"
             remarks = _compose_attorney_remark(
                 feature=feature,
@@ -195,7 +224,7 @@ def generate_claim_chart(claim_text: str, prior_art_text: str, office_action_tex
                 looks_static_in_doc=looks_static_in_doc,
             )
         elif overlap >= 1 and not refs:
-            disclosure = f'{selected_doc} "{snippet_clean}"'
+            disclosure = _format_disclosure(doc_id=selected_doc, snippet=snippet_clean, refs=[])
             assessment = "⚠️ Partial"
             remarks = _compose_attorney_remark(
                 feature=feature,

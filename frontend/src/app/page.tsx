@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, type ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -50,6 +50,60 @@ type TranslationRow = {
   hasRisk: boolean;
 };
 
+function renderInlineMd(text: string) {
+  const s = text || "";
+  const parts: Array<{ bold: boolean; value: string }> = [];
+  const re = /\*\*(.+?)\*\*/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(s)) !== null) {
+    if (m.index > last) {
+      parts.push({ bold: false, value: s.slice(last, m.index) });
+    }
+    parts.push({ bold: true, value: m[1] || "" });
+    last = re.lastIndex;
+  }
+  if (last < s.length) {
+    parts.push({ bold: false, value: s.slice(last) });
+  }
+
+  const nodes: ReactNode[] = [];
+  let key = 0;
+  for (const p of parts) {
+    const chunks = p.value.split("<br>");
+    chunks.forEach((chunk, idx) => {
+      if (p.bold) {
+        nodes.push(
+          <span
+            key={`b-${key++}`}
+            className="inline-flex items-center rounded bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 text-xs font-medium text-amber-200"
+          >
+            {chunk}
+          </span>
+        );
+      }
+      else nodes.push(chunk);
+      if (idx < chunks.length - 1) nodes.push(<br key={`br-${key++}`} />);
+    });
+  }
+  return nodes;
+}
+
+function claimStatusBadge(statusText: string | undefined) {
+  const s = (statusText || "").toLowerCase();
+  if (!s) return { label: "", className: "bg-white/[0.06] text-white/50 border-white/[0.08]" };
+  if (s.includes("✅") || s.includes("yes") || s.includes("disclose")) {
+    return { label: "Disclosed", className: "bg-white/[0.06] text-white/60 border-white/[0.08]" };
+  }
+  if (s.includes("⚠") || s.includes("partial")) {
+    return { label: "Partial", className: "bg-amber-500/10 text-amber-200 border-amber-500/20" };
+  }
+  if (s.includes("❌") || s.includes("difference") || s.includes("distinguish")) {
+    return { label: "Distinguishing", className: "bg-amber-500/10 text-amber-200 border-amber-500/20" };
+  }
+  return { label: statusText || "", className: "bg-white/[0.06] text-white/50 border-white/[0.08]" };
+}
+
 function parseMarkdownPipeTable3(md: string): TranslationRow[] {
   const text = (md || "").trim();
   if (!text) return [];
@@ -75,7 +129,7 @@ function parseMarkdownPipeTable3(md: string): TranslationRow[] {
     const originalCn = cells[0] || "";
     const targetEn = cells[1] || "";
     const backCn = cells[2] || "";
-    const hasRisk = /VERB_MISMATCH|\*\*/.test(originalCn) || /VERB_MISMATCH|\*\*/.test(backCn);
+    const hasRisk = /CRITICAL:|VOCAB_ALERT|VERB_MISMATCH/i.test(originalCn) || /CRITICAL:|VOCAB_ALERT|VERB_MISMATCH/i.test(backCn);
     rows.push({ originalCn, targetEn, backCn, hasRisk });
   }
   return rows;
@@ -99,10 +153,36 @@ export default function Workspace() {
   const [taskError, setTaskError] = useState<string | null>(null);
   const [result, setResult] = useState<TaskResult | null>(null);
 
+  const [officeActionText, setOfficeActionText] = useState<string>("");
+  const [specificationText, setSpecificationText] = useState<string>("");
+  const officeActionInputRef = useRef<HTMLInputElement>(null);
+  const specificationInputRef = useRef<HTMLInputElement>(null);
+
+  const handleOfficeActionUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      setOfficeActionText(text);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleSpecificationUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      setSpecificationText(text);
+    };
+    reader.readAsText(file);
+  };
+
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
   const handleExecute = async () => {
-    console.log('[Debug] handleExecute start');
     setIsExecuting(true);
     setTaskError(null);
     setResult(null);
@@ -119,8 +199,8 @@ export default function Workspace() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          office_action_text: "",
-          specification_text: "",
+          office_action_text: officeActionText,
+          specification_text: specificationText,
           examiner_preference: examinerBias,
           claim_type: claimType,
         }),
@@ -132,7 +212,6 @@ export default function Workspace() {
       }
 
       const data = (await resp.json()) as { task_id?: string; queue_position?: number | null; queue_size?: number | null };
-      console.log('[Debug] /api/generate response:', data);
       if (!data.task_id) {
         throw new Error("Missing task_id from /api/generate");
       }
@@ -145,7 +224,6 @@ export default function Workspace() {
       }
       setTaskStep("Queued");
     } catch (e) {
-      console.error('[Debug] handleExecute error:', e);
       setTaskError(e instanceof Error ? e.message : String(e));
       setIsExecuting(false);
       setTaskId(null);
@@ -165,7 +243,6 @@ export default function Workspace() {
           throw new Error(text || `HTTP ${resp.status}`);
         }
         const data = (await resp.json()) as StatusResponse;
-        console.log('[Debug] /api/status response:', data);
         if (cancelled) return;
 
         setTaskState(data.state);
@@ -200,8 +277,6 @@ export default function Workspace() {
         }
 
         if (data.state === "SUCCESS") {
-          console.log('[Debug] Task SUCCESS, result:', data.result);
-          setTaskPercent(100);
           setResult(data.result || null);
           setIsExecuting(false);
           window.clearInterval(interval);
@@ -215,7 +290,6 @@ export default function Workspace() {
         }
 
         if (data.state === "FAILURE") {
-          console.error('[Debug] Task FAILURE:', data.error);
           setTaskError(data.error || "Task failed");
           setIsExecuting(false);
           window.clearInterval(interval);
@@ -308,34 +382,62 @@ export default function Workspace() {
         {/* Upload Cards + Config Row */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Office Action Upload */}
-          <div className="group relative rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm p-5 hover:border-purple-500/30 hover:bg-white/[0.05] transition-all duration-300 cursor-pointer">
+          <div 
+            className="group relative rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm p-5 hover:border-purple-500/30 hover:bg-white/[0.05] transition-all duration-300 cursor-pointer"
+            onClick={() => officeActionInputRef.current?.click()}
+          >
+            <input
+              type="file"
+              ref={officeActionInputRef}
+              onChange={handleOfficeActionUpload}
+              accept=".txt,.pdf,.doc,.docx"
+              className="hidden"
+            />
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-purple-500/20 transition-colors">
                 <UploadCloud className="w-5 h-5 text-purple-400" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white/90 mb-1">Office Action</p>
-                <p className="text-xs text-white/30">PDF or TXT format</p>
+                <p className="text-xs text-white/30">
+                  {officeActionText ? "File loaded ✓" : "PDF or TXT format"}
+                </p>
               </div>
             </div>
             <div className="mt-4 border border-dashed border-white/10 rounded-lg p-3 text-center hover:border-purple-500/30 transition-colors">
-              <p className="text-xs text-white/25">Drop file or click to browse</p>
+              <p className="text-xs text-white/25">
+                {officeActionText ? officeActionText.slice(0, 50) + "..." : "Drop file or click to browse"}
+              </p>
             </div>
           </div>
 
           {/* Patent Specification Upload */}
-          <div className="group relative rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm p-5 hover:border-blue-500/30 hover:bg-white/[0.05] transition-all duration-300 cursor-pointer">
+          <div 
+            className="group relative rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm p-5 hover:border-blue-500/30 hover:bg-white/[0.05] transition-all duration-300 cursor-pointer"
+            onClick={() => specificationInputRef.current?.click()}
+          >
+            <input
+              type="file"
+              ref={specificationInputRef}
+              onChange={handleSpecificationUpload}
+              accept=".txt,.pdf,.doc,.docx"
+              className="hidden"
+            />
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/20 transition-colors">
                 <FileText className="w-5 h-5 text-blue-400" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white/90 mb-1">Patent Specification</p>
-                <p className="text-xs text-white/30">PDF, TXT, or DOCX</p>
+                <p className="text-xs text-white/30">
+                  {specificationText ? "File loaded ✓" : "PDF, TXT, or DOCX"}
+                </p>
               </div>
             </div>
             <div className="mt-4 border border-dashed border-white/10 rounded-lg p-3 text-center hover:border-blue-500/30 transition-colors">
-              <p className="text-xs text-white/25">Drop file or click to browse</p>
+              <p className="text-xs text-white/25">
+                {specificationText ? specificationText.slice(0, 50) + "..." : "Drop file or click to browse"}
+              </p>
             </div>
           </div>
 
@@ -462,12 +564,9 @@ export default function Workspace() {
                   <thead>
                     <tr className="border-b border-white/[0.06] bg-white/[0.02]">
                       <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-16">ID</th>
-                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest">Claim Limitation</th>
-                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest">
-                        Prior Art
-                      </th>
-                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-40">Assessment</th>
-                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest">System Remarks</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest">CLAIM LIMITATION</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest">PRIOR ART (D1)</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-36">STATUS</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -476,28 +575,26 @@ export default function Workspace() {
                         <tr key={`${row.feature_id || idx}`} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
                           <td className="px-6 py-5 align-top font-mono text-sm text-purple-400/80">{row.feature_id || String(idx + 1)}</td>
                           <td className="px-6 py-5 align-top text-white/80 leading-relaxed">{row.claim_limitation || ""}</td>
-                          <td className="px-6 py-5 align-top text-white/50 leading-relaxed">{row.disclosure || row.prior_art_mapping || row.d1_mapping || "Not disclosed."}</td>
-                          <td className="px-6 py-5 align-top">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
-                                (row.assessment || row.status || "").includes("✅")
-                                  ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
-                                  : (row.assessment || row.status || "").includes("⚠️")
-                                  ? "bg-amber-500/10 text-amber-200 border-amber-500/30"
-                                  : "bg-rose-500/10 text-rose-200 border-rose-500/30"
-                              }`}
-                            >
-                              {row.assessment || row.status || "❌ No"}
-                            </span>
+                          <td className="px-6 py-5 align-top text-white/50 leading-relaxed">
+                            {row.prior_art_mapping || row.disclosure || row.d1_mapping || ""}
                           </td>
-                          <td className="px-6 py-5 align-top text-white/60 leading-relaxed text-xs">
-                            {row.attorney_remarks || "No notes."}
+                          <td className="px-6 py-5 align-top">
+                            {(() => {
+                              const badge = claimStatusBadge(row.status || row.assessment);
+                              return (
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${badge.className}`}
+                                >
+                                  {badge.label}
+                                </span>
+                              );
+                            })()}
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={5} className="px-6 py-8 text-sm text-white/30">
+                        <td colSpan={4} className="px-6 py-8 text-sm text-white/30">
                           {isExecuting ? "Generating claim chart..." : "No claim chart yet. Execute pipeline to generate results."}
                         </td>
                       </tr>
@@ -522,19 +619,18 @@ export default function Workspace() {
             </div>
           </TabsContent>
 
-          {/* Tab 2: Translation Verifier */}
           <TabsContent value="verifier" className="mt-0">
             <div className="rounded-b-xl rounded-tr-xl border border-white/[0.06] border-t-0 bg-white/[0.02] backdrop-blur-sm overflow-hidden">
               <div className="overflow-x-auto">
                 {(() => {
-                  const structured = (result?.translation_rows || []).map((r) => ({
+                  const apiRows = (result?.translation_rows || []).map((r) => ({
                     originalCn: r.original_cn || "",
                     targetEn: r.target_en || "",
                     backCn: r.back_cn || "",
                     hasRisk: Boolean(r.has_risk),
                   }));
                   const md = result?.translation_table_markdown || "";
-                  const rows = structured.length > 0 ? structured : parseMarkdownPipeTable3(md);
+                  const rows = apiRows.length ? apiRows : parseMarkdownPipeTable3(md);
 
                   if (!rows.length) {
                     return (
@@ -559,9 +655,9 @@ export default function Workspace() {
                             key={idx}
                             className={`border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors ${r.hasRisk ? "bg-amber-500/5" : ""}`}
                           >
-                            <td className="px-6 py-5 align-top text-white/60 leading-relaxed">{r.originalCn}</td>
-                            <td className="px-6 py-5 align-top text-white/80 leading-relaxed">{r.targetEn}</td>
-                            <td className={`px-6 py-5 align-top leading-relaxed ${r.hasRisk ? "text-amber-200" : "text-white/50"}`}>{r.backCn}</td>
+                            <td className="px-6 py-5 align-top text-white/60 leading-relaxed">{renderInlineMd(r.originalCn)}</td>
+                            <td className="px-6 py-5 align-top text-white/80 leading-relaxed">{renderInlineMd(r.targetEn)}</td>
+                            <td className={`px-6 py-5 align-top leading-relaxed ${r.hasRisk ? "text-amber-200" : "text-white/50"}`}>{renderInlineMd(r.backCn)}</td>
                           </tr>
                         ))}
                       </tbody>
