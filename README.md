@@ -9,11 +9,6 @@
 
 *Built by an IP professional, for IP professionals.*
 
----
-
-> 🎥 **[Watch the 2-Minute Architecture & UI Demo Here]** *(Add your Loom/YouTube link here)*
-> 
-> ![PatentFlow UI Screenshot](https://via.placeholder.com/800x400.png?text=Insert+High-Res+Next.js+Dark+Mode+Screenshot+Here) *(Replace with your actual UI screenshot)*
 
 ---
 
