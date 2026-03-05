@@ -11,8 +11,12 @@ from pydantic import BaseModel, Field
 import redis
 
 from src.celery_app import celery_app
+from src.memory_manager import LocalMemoryManager
 from src.skills import ClaimChartGenerator, TranslationVerifier
 from src.tasks import run_patentflow_generate
+
+
+memory_db = LocalMemoryManager()
 
 
 app = FastAPI(title="PatentFlow API", version="0.1.0")
@@ -50,6 +54,7 @@ class GenerateRequest(BaseModel):
     specification_text: str = Field(default="", description="Raw text extracted from specification")
     examiner_preference: str = Field(default="", description="Examiner preference bias label")
     claim_type: str = Field(default="Method", description="Claim category")
+    attorney_name: str = Field(default="", description="Attorney identity for local preference memory")
 
 
 class GenerateResponse(BaseModel):
@@ -71,6 +76,7 @@ class GenerateChartRequest(BaseModel):
     claim_text: str = Field(..., description="Patent claim text to analyze", min_length=10)
     prior_art_text: str = Field(default="", description="Prior art text (fallback if office_action_text empty)")
     office_action_text: str = Field(default="", description="Office action text with D1/D2 references")
+    attorney_id: str = Field(default="Default", description="Attorney identity for local preference memory")
 
 
 class GenerateChartResponse(BaseModel):
@@ -82,11 +88,17 @@ class GenerateChartResponse(BaseModel):
     warnings: List[str] = Field(default_factory=list, description="Non-fatal warnings")
 
 
+class MemoryAddRequest(BaseModel):
+    attorney_id: str = Field(..., min_length=1, description="Attorney identifier")
+    new_rule: str = Field(..., min_length=1, description="New rule to append")
+
+
 class VerifyTranslationRequest(BaseModel):
     """Request schema for /api/verify-translation endpoint."""
     original_cn: str = Field(..., description="Original Chinese text segment", min_length=1)
     target_en: str = Field(..., description="Target English translation", min_length=1)
     back_cn: str = Field(default="", description="Back-translated Chinese for verification")
+    attorney_id: str = Field(default="Default", description="Attorney identity for local preference memory")
 
 
 class VerifyTranslationResponse(BaseModel):
@@ -120,6 +132,7 @@ def generate(req: GenerateRequest) -> GenerateResponse:
         specification_text=req.specification_text,
         examiner_preference=req.examiner_preference,
         claim_type=req.claim_type,
+        attorney_name=req.attorney_name,
     )
 
     queue_position: Optional[int] = None
@@ -256,7 +269,8 @@ def generate_chart(req: GenerateChartRequest) -> GenerateChartResponse:
         result = generator.execute(
             claim_text=req.claim_text,
             prior_art_text=req.prior_art_text,
-            office_action_text=req.office_action_text
+            office_action_text=req.office_action_text,
+            attorney_id=req.attorney_id,
         )
         
         return GenerateChartResponse(
@@ -306,6 +320,27 @@ def verify_translation(req: VerifyTranslationRequest) -> VerifyTranslationRespon
             error=f"TRANSLATION_VERIFICATION_ERROR: {str(e)}",
             warnings=["Failed to verify translation"]
         )
+
+
+@app.get("/api/memory/{attorney_id}")
+def get_memory(attorney_id: str) -> Dict[str, str]:
+    try:
+        prefs = memory_db.get_preferences(attorney_id)
+        return {"status": "success", "preferences": prefs}
+    except Exception as e:
+        return {"status": "error", "preferences": "", "error": f"MEMORY_GET_ERROR: {str(e)}"}
+
+
+@app.post("/api/memory/add")
+def add_memory(req: MemoryAddRequest) -> Dict[str, str]:
+    try:
+        ok = memory_db.add_preference(req.attorney_id, req.new_rule)
+        if not ok:
+            return {"status": "error", "error": "MEMORY_ADD_FAILED"}
+        prefs = memory_db.get_preferences(req.attorney_id)
+        return {"status": "success", "preferences": prefs}
+    except Exception as e:
+        return {"status": "error", "error": f"MEMORY_ADD_ERROR: {str(e)}"}
 
 
 @app.exception_handler(Exception)

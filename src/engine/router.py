@@ -9,6 +9,7 @@ from .base import BaseLLM, Message
 from .cloud_engine import CloudEngine
 from .local_engine import OllamaEngine
 from .mock_engine import MockEngine
+from src.memory_manager import LocalMemoryManager, format_preferences_for_system_prompt
 
 
 _DEFAULT_SENSITIVE_PATTERNS = (
@@ -90,6 +91,28 @@ class PatentRouter:
         max_tokens: Optional[int] = None,
         **kwargs: object,
     ) -> str:
+        attorney_name = str(kwargs.get("attorney_name") or "").strip()
+        user_id = str(kwargs.get("user_id") or "").strip()
+        if attorney_name or user_id:
+            manager = LocalMemoryManager()
+            profile = manager.get_profile(attorney_name=attorney_name or None, user_id=user_id or None)
+            injected = format_preferences_for_system_prompt(profile)
+            if injected:
+                if messages is None:
+                    messages = [
+                        {"role": "system", "content": injected},
+                        {"role": "user", "content": prompt},
+                    ]
+                else:
+                    msgs = list(messages)
+                    first_role = str((msgs[0] or {}).get("role") or "").strip().lower() if msgs else ""
+                    if first_role == "system":
+                        content = str((msgs[0] or {}).get("content") or "")
+                        msgs[0] = {"role": "system", "content": (content + "\n\n" + injected).strip()}
+                    else:
+                        msgs.insert(0, {"role": "system", "content": injected})
+                    messages = msgs
+
         self._warn_if_mismatch(prompt, messages)
         engine = self.route()
         return engine.generate(

@@ -1,167 +1,215 @@
-# ⚖️ PatentFlow: Agentic Patent Prosecution Workspace
+# ⚖️ PatentFlow — Offline Agentic Patent Prosecution Workspace
 
-![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
-![Frontend: Next.js](https://img.shields.io/badge/Frontend-Next.js%20%7C%20Tailwind-black)
-![Backend: FastAPI](https://img.shields.io/badge/Backend-FastAPI%20%7C%20Celery-green)
-![Testing: Pytest](https://img.shields.io/badge/Testing-Pytest-blue)
-![AI Engine: Local LLM](https://img.shields.io/badge/AI_Engine-100%25%20Offline%20LLM-red)
+![UI: Next.js](https://img.shields.io/badge/UI-Next.js-black)
+![API: FastAPI](https://img.shields.io/badge/API-FastAPI-009688)
+![Queue: Celery](https://img.shields.io/badge/Queue-Celery-37814A)
+![Broker: Redis](https://img.shields.io/badge/Broker-Redis-DC382D)
+![Memory: SQLite](https://img.shields.io/badge/Memory-SQLite-003B57)
+![LLM: Local](https://img.shields.io/badge/LLM-Local%20LLM-6B7280)
 
-**PatentFlow** is an enterprise-grade, privacy-first Document Processing Workspace. Designed strictly for European Patent Attorneys, it handles heavy-document processing via a **hardened asynchronous task queue (Celery + Redis)** and deterministic Python Agent Skills, while strictly maintaining 100% offline, air-gapped operation for client confidentiality.
+**PatentFlow** is an enterprise-grade, privacy-first Document Processing Workspace designed for **European Patent Attorneys**. It targets the realities of prosecution work:
 
-*Built by an IP professional, for IP professionals.*
+- **Art. 123(2) EPC** risk (added matter) where wording choices can be fatal
+- **Art. 56 EPC** inventive-step mapping where semantic interpretation matters
+- **Client confidentiality** where “cloud by default” is not acceptable
 
-
----
-
-## 💡 The "Why" (Design Philosophy)
-
-After four years of working as a Patent Assistant handling Telecommunications and Optics files, I observed three major bottlenecks in LegalTech adoption:
-
-1. **Client Confidentiality**: Public cloud AI (ChatGPT, Claude) is strictly prohibited for unpublished patent drafts.
-2. **Legal Hallucinations**: Standard LLMs fail to respect rigid EPO frameworks. They hallucinate differences between "comprising" and "consisting of" (fatal for Art. 123(2)) and struggle to map specific features to Prior Art (Art. 56).
-3. **Concurrency & OOM**: Heavy local LLM inference and regex parsing can easily cause HTTP timeouts or exhaust GPU memory (OOM) when multiple attorneys use the tool synchronously.
-
-**PatentFlow** solves this with:
-- **100% offline local AI** constrained by deterministic Python OOP structures and unit tests.
-- **OOM-Protected Task Queuing** (Celery + Redis configured with strict `concurrency=1` and `prefetch_multiplier=1`) to gracefully handle firm-wide concurrent requests.
-- **DDoS-Resistant UX** via a Next.js UI utilizing exponential backoff polling, preventing user anxiety without overloading the Redis broker.
+Built by an IP professional, for IP professionals.
 
 ---
 
-## 🏗️ System Architecture & Asynchronous Flow
+## Why PatentFlow
 
-PatentFlow employs a decoupled microservices architecture. Heavy LLM reasoning is offloaded to background workers, allowing the UI to remain highly responsive.
+### 1) Legal accuracy under institutional constraints
+Patent prosecution is not “generic writing.” It is **risk management**:
+- A single phrasing shift can trigger an Art. 123(2) issue
+- Inventive-step reasoning requires structured, repeatable mapping
+- Quality and traceability matter more than “chatty” UX
+
+### 2) 100% offline operation for client confidentiality
+PatentFlow is designed to run fully locally:
+- Local LLM execution (air-gapped capable)
+- No external SaaS dependencies required for core workflows
+- Local persistence for attorney-specific preferences
+
+### 3) Enterprise UX: minimal, information-dense, institutional
+The UI follows a **Bloomberg Terminal-style** aesthetic:
+- High signal density
+- Subtle controls
+- Low-friction review of structured outputs
+
+---
+
+## Trade Secret / Black Box Disclaimer (Intentional)
+Specific system prompts, proprietary dictionaries, and heuristic parsing algorithms are **intentionally omitted** from this public repository to protect intellectual property.
+
+PatentFlow exposes stable interfaces and deterministic boundaries while keeping core prompt logic and proprietary linguistic assets internal.
+
+---
+
+## System Architecture (High-Level)
 
 ```mermaid
 graph TD
     subgraph Frontend [Next.js Enterprise UI - Port 3000]
-        UI[Workspace Dashboard] -->|"POST /api/generate"| API[FastAPI Gateway :8000]
-        UI -->|"GET /api/status/:id (Exp. Backoff)"| API
+        UI[Workspace Dashboard]
+        UI -->|POST /api/generate| API[FastAPI Gateway :8000]
+        UI -->|GET /api/status/:id| API
+        UI -->|GET/POST /api/memory/*| API
     end
 
     subgraph Backend [FastAPI + Celery Workers]
-        API -->|"Enqueue Task"| Broker[(Redis Broker :6379)]
-        API -->|"Fetch Result"| BackendRedis[(Redis Backend)]
-        
-        Worker1[Celery Worker #1] -->|"Consume (Prefetch=1)"| Broker
-        
-        Worker1 -->|"Execute"| Base[Skills Interface Base]
-        Base -->|"Inherits"| S1[Translation Verifier]
-        Base -->|"Inherits"| S2[Claim Chart Generator]
+        API -->|Enqueue Tasks| Broker[(Redis Broker :6379)]
+        API -->|Fetch Results| BackendRedis[(Redis Result Backend)]
+        Broker -->|Consume| Worker[Celery Worker]
+
+        Worker --> Skills[Skills Interface]
+        SQLite[(Local Profile DB)] --> Skills
     end
 
-    subgraph Privacy Layer [100% Offline AI Infrastructure]
-        S2 -->|"1. Heuristic Parsing"| Tokenizer(Regex Tokenizer)
-        Tokenizer -->|"2. Feature Assessment"| LLM[(Local LLM - Air-gapped)]
-        S1 -->|"Strict Glossary Check"| Dict(3GPP Proprietary Dictionary)
+    subgraph External [Optional Data Sources]
+        EPO[EPO API] -->|Prior Art Retrieval| API
     end
 
-    style Frontend fill:#f8fafc,stroke:#cbd5e1
-    style Backend fill:#f0fdf4,stroke:#86efac
-    style Privacy Layer fill:#fef2f2,stroke:#fca5a5
+    subgraph AI [Local AI Runtime]
+        Skills --> LLM[(Local LLM)]
+    end
 ```
 
 ---
 
-## ✨ Core Capabilities (The Agent Skills)
+## Core Capabilities
 
-> **Note**: Specific LLM system prompts, proprietary 3GPP mapping dictionaries, and core heuristic regex parsing algorithms are intentionally omitted from this public repository to protect the underlying intellectual logic. The demonstrable features include:
+### 1) Art. 56 Claim Chart Generation (LLM-Assisted, Structured Output)
+Generate an attorney-reviewable claim chart with:
+- Feature-by-feature claim splitting
+- Prior art excerpt anchoring (D1/D2)
+- LLM semantic assessment:
+  - `Yes` / `No` / `Partial`
+  - reasoning captured per row for auditability
 
-### 1. Dual-Verification Translator (Art. 123(2) Mitigation)
-**Architecture**: A deterministic checker bypassing the LLM.
+### 2) Art. 123(2) Translation Verification (High-Risk Terminology Guardrails)
+A verification workflow designed to surface:
+- semantic mismatches
+- risky wording drift
+- institutional terminology consistency
 
-![Translation Verifier](./docs/screenshots/verifier.png)
+### 3) Dynamic Attorney Memory (Local Persistent Context Injection)
+PatentFlow supports a **Local User Preference Engine** that stores and recalls attorney preferences entirely offline:
 
-**Logic**: It cross-references the English translation against the Chinese original using a hardcoded legal glossary. It automatically flags lethal verb-scope mismatches (e.g., translating "包括" as the closed-ended "consisting of" instead of "comprising") with critical amber warnings to prevent unallowable amendments.
+- **SQLite-backed memory** (zero external dependencies)
+- Profile-specific preferences persisted across sessions
+- Preferences are dynamically injected into the LLM system context at runtime
 
-### 2. Automated Claim Charting (Art. 56 Analysis)
-**Architecture**: A hybrid Heuristic + LLM approach.
+**Business value**
+- Enforces firm-wide house style and attorney-specific drafting habits
+- Reduces “micro-friction” edits and repeated preference corrections
+- Supports consistent examiner strategy posture across matters
 
-![Claim Chart](./docs/screenshots/claim_chart.png)
+### 4) One-Click EPO Prior Art Ingestion
+PatentFlow integrates EPO retrieval to support:
+- automated ingestion of cited prior art (e.g., D1/D2 full text)
+- reduced manual copy/paste and document hunting
+- faster turnaround from Office Action to structured analysis
 
-**Logic**:
-
-- **Tokenizer**: A deterministic Python parser splits independent claims into specific features (e.g., 1.1, 1.2) using transitional phrases.
-- **Evaluator**: The local LLM is then prompted feature-by-feature to locate the exact disclosure in the Prior Art (D1), returning structured JSON (`assessment`: Yes/No/Partial, `d1_disclosure`: "Paragraph [0045]").
-
-### 3. EPO Response Drafting
-Auto-generates formal response letters based on predefined examiner biases. Exports to clean, standard-compliant formatting.
-
-![EPO Response Draft](./docs/screenshots/response_draft.png)
+**Business value**
+- Cuts administrative time
+- Increases completeness and consistency of cited-document context
+- Improves auditability of the evidence basis used in analysis
 
 ---
 
-## 🧪 Testing & Reliability
+## Quick Start
 
-Because legal terminology requires absolute precision, the core deterministic skills are covered by `pytest`.
+### Option A — Docker (recommended for reproducibility)
+1) Configure environment:
+- Copy `.env.example` → `.env`
+- Set `NEXT_PUBLIC_API_BASE_URL`, `REDIS_URL`, and LLM configuration as needed
 
-- **Verifier Tests**: Ensures that boundary-crossing terms (e.g., mixing up "based on" and "in response to") trigger immediate **CRITICAL** risk alerts, guaranteeing the system never quietly accepts a fatal Art. 123(2) error.
-- **LLM Fallbacks**: Celery workers are configured with `autoretry_for=(Exception,)` and exponential backoff, ensuring that if the local LLM times out or returns malformed JSON, the task gracefully retries without crashing the pipeline.
-
----
-
-## 🚀 Quick Start (Local Deployment)
-
-### Option A: Docker Compose (Production-like)
-The entire asynchronous stack (UI, API, Redis, Celery) can be spun up using Docker.
-
+2) Start services:
 ```bash
-docker compose up --build -d
+docker compose up --build
 ```
 
-- **Frontend**: http://localhost:3000
-- **API Docs (Swagger UI)**: http://localhost:8000/docs
+Typical services:
+- `frontend` (Next.js UI)
+- `api` (FastAPI gateway)
+- `redis` (broker + result backend)
+- `worker` (Celery worker, local LLM calls)
 
-### Option B: Manual Startup (For Development)
-**Requires**: Python 3.9+, Node.js 18+, Redis instance.
+### Option B — Manual (local development)
 
+#### 1) Backend (FastAPI)
 ```bash
-# 1. Start Redis Server
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+export REDIS_URL=redis://localhost:6379/0
+uvicorn src.api:app --host 0.0.0.0 --port 8000
+```
+
+#### 2) Redis
+```bash
 redis-server
-
-# 2. Start FastAPI Gateway
-REDIS_URL=redis://localhost:6379/0 uvicorn src.api:app --host 0.0.0.0 --port 8000
-
-# 3. Start Celery Worker (Strict concurrency for local LLM)
-REDIS_URL=redis://localhost:6379/0 celery -A src.celery_app.celery_app worker -l info --concurrency=1 --prefetch-multiplier=1
-
-# 4. Start Next.js Frontend
-cd frontend && npm install && NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev
 ```
 
----
-
-## 📁 Project Structure
-
-```plaintext
-PatentFlow/
-├── src/
-│   ├── api.py              # FastAPI endpoints + CORS
-│   ├── celery_app.py       # Celery & Redis configuration
-│   ├── tasks.py            # Async LLM task definitions
-│   └── skills/             # Agent Skills (ClaimChart, Verifier)
-│       ├── __init__.py
-│       ├── base.py         # SkillResult envelope
-│       ├── claim_chart.py  # Art. 56 Claim Chart Generator
-│       └── verifier.py     # Art. 123(2) Translation Verifier
-├── frontend/
-│   └── src/app/page.tsx    # Next.js Workspace UI
-├── docker-compose.yml      # Microservices orchestration
-└── requirements.txt        # Python dependencies
+#### 3) Celery Worker
+```bash
+export REDIS_URL=redis://localhost:6379/0
+celery -A src.celery_app.celery_app worker -l info --concurrency=1 --prefetch-multiplier=1
 ```
 
+#### 4) Frontend (Next.js)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open:
+- UI: `http://localhost:3000`
+- API: `http://localhost:8000/health`
+
 ---
 
-## 🗺️ Roadmap (Prioritized for Firm Integration)
-
-Based on architectural reviews and EPO workflow priorities, upcoming features are staged as follows:
-
-- [ ] **Priority 1: SSE Streaming (UX)**: Upgrade the frontend polling mechanism to Server-Sent Events (SSE) for real-time, typewriter-effect rendering, crucial for maintaining attorney focus during 30s+ LLM generation times.
-
-- [ ] **Priority 2: .Docx Export Workflow (Adoption)**: Integrate `python-docx` to allow attorneys to export the generated Claim Charts directly into MS Word with "Track Changes" enabled, ensuring seamless integration into existing firm workflows.
-
-- [ ] **Priority 3: Local RAG Integration (Depth)**: Implement ChromaDB to chunk and index massive 3GPP Technical Specifications (e.g., TS 38.214). This will require precise TS chunking strategies to drastically reduce GPU VRAM usage and eliminate context-window hallucination.
+## API Overview (Selected)
+- `POST /api/generate`
+  - Runs the async pipeline (Celery) for claim chart + verification + draft outputs
+- `GET /api/status/{task_id}`
+  - Poll for progress and results
+- `GET /api/memory/{attorney_id}`
+  - Retrieve stored preference string
+- `POST /api/memory/add`
+  - Append a new preference rule for an attorney profile
+- `POST /api/generate-chart`
+  - Deterministic + LLM-assisted chart generation with optional `attorney_id`
 
 ---
 
-*Disclaimer: This project demonstrates the intersection of software engineering and patent prosecution. It is designed to assist, not replace, the strategic judgment of a qualified European Patent Attorney.*
+## Security & Privacy Posture
+- Designed for offline and air-gapped operation
+- Local persistence only (SQLite)
+- No dependency on third-party analytics, telemetry, or cloud inference for core workflows
+
+---
+
+## Roadmap (Prioritized for Firm Integration)
+
+- [ ] **RAG with ChromaDB (Depth)**  
+  Local retrieval over firm-approved corpora (e.g., standards, prior OA templates) to improve long-document reasoning while controlling hallucination risk.
+
+- [ ] **.docx Export Workflow (Adoption)**  
+  Export claim charts and drafted responses into Word with firm formatting and review conventions.
+
+- [ ] **SSE Streaming (UX)**  
+  Upgrade from polling to server-sent events for long-running generation, keeping the interface calm and traceable.
+
+- [ ] **Policy Packs (Governance)**  
+  Versioned preference bundles per firm/practice group to standardize style and examiner strategy guidance.
+
+---
+
+## License / Intended Use
+This repository is intended for professional evaluation and internal deployment patterns.
+
+For production firm deployments, additional hardening (audit logs, access controls, document storage policies) is recommended.

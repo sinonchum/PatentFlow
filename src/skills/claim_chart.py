@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
 
 from .base import PatentAgentSkill, SkillResult
+from src.memory_manager import LocalMemoryManager
 
 
 class ChartRow(BaseModel):
@@ -200,11 +201,38 @@ class ClaimChartGenerator(PatentAgentSkill[ClaimChartResult]):
         tokens2 = set(re.findall(r'[A-Za-z0-9]{3,}', text2.lower()))
         return len(tokens1 & tokens2)
 
+    def _parse_llm_assessment_json(self, raw: str) -> tuple[Literal["Yes", "No", "Partial"], str]:
+        import json
+
+        text = (raw or "").strip()
+        if not text:
+            raise ValueError("Empty LLM response")
+
+        # Best-effort extraction if the model wrapped JSON in prose / markdown.
+        start = text.find("{")
+        end = text.rfind("}")
+        candidate = text
+        if start != -1 and end != -1 and end > start:
+            candidate = text[start : end + 1]
+
+        obj = json.loads(candidate)
+        if not isinstance(obj, dict):
+            raise ValueError("LLM response JSON is not an object")
+
+        assessment_raw = str(obj.get("assessment") or "").strip()
+        reasoning = str(obj.get("reasoning") or "").strip()
+
+        if assessment_raw not in {"Yes", "No", "Partial"}:
+            raise ValueError(f"Invalid assessment value: {assessment_raw!r}")
+
+        return assessment_raw, reasoning
+
     def execute(
         self,
         claim_text: str,
         prior_art_text: str,
-        office_action_text: str = ""
+        office_action_text: str = "",
+        attorney_id: str = "Default",
     ) -> ClaimChartResult:
         """
         Generate claim chart comparing claim features against prior art.
@@ -217,6 +245,26 @@ class ClaimChartGenerator(PatentAgentSkill[ClaimChartResult]):
         Returns:
             ClaimChartResult with chart rows and cited documents
         """
+        preferences = ""
+        if (attorney_id or "").strip() and attorney_id != "Default":
+            try:
+                preferences = LocalMemoryManager().get_preferences(attorney_id)
+            except Exception:
+                preferences = ""
+
+        base_system_prompt = (
+            "You are an EPO Patent Examiner. Analyze if the following claim feature is disclosed in the Prior Art."
+        )
+        if preferences:
+            system_prompt = (
+                f"{base_system_prompt}\n\n"
+                "[CRITICAL USER PREFERENCES TO FOLLOW STRICTLY]\n"
+                f"{preferences}\n"
+                "[/CRITICAL USER PREFERENCES]"
+            )
+        else:
+            system_prompt = base_system_prompt
+
         # Step 1: Deterministically split claim into features
         features = self._tokenize_claim(claim_text)
 
@@ -239,7 +287,6 @@ class ClaimChartGenerator(PatentAgentSkill[ClaimChartResult]):
         for feature in features:
             best_doc = cited_docs[0]
             best_snippet = ""
-            best_overlap = -1
             best_refs = []
             best_snippet_idx = (-1, -1)  # (doc_idx, snippet_idx)
 
@@ -250,22 +297,23 @@ class ClaimChartGenerator(PatentAgentSkill[ClaimChartResult]):
                     continue
 
                 for snippet_idx, snippet in enumerate(snippets):
-                    overlap = self._token_overlap(feature["limitation"], snippet)
-                    
-                    # Penalize if already used (to ensure variety)
-                    if (doc_idx, snippet_idx) in used_snippet_indices and overlap > 0:
-                        overlap = max(0, overlap - 2)
-                    
-                    # Boost first available snippet for first features
-                    if snippet_idx == 0 and overlap > 0 and not used_snippet_indices:
-                        overlap += 1
-                    
-                    if overlap > best_overlap:
-                        best_overlap = overlap
+                    # Prefer unused snippets; otherwise prefer longer snippets as richer context.
+                    if (doc_idx, snippet_idx) in used_snippet_indices:
+                        continue
+
+                    if not best_snippet or len(snippet) > len(best_snippet):
                         best_doc = doc_id
                         best_snippet = snippet
                         best_refs = self._extract_refs(snippet)
                         best_snippet_idx = (doc_idx, snippet_idx)
+
+                # Fallback: if everything is used, take the longest snippet from this doc.
+                if not best_snippet:
+                    longest_idx = max(range(len(snippets)), key=lambda i: len(snippets[i]))
+                    best_doc = doc_id
+                    best_snippet = snippets[longest_idx]
+                    best_refs = self._extract_refs(best_snippet)
+                    best_snippet_idx = (doc_idx, longest_idx)
 
             # Mark this snippet as used
             if best_snippet_idx[0] >= 0:
@@ -276,13 +324,46 @@ class ClaimChartGenerator(PatentAgentSkill[ClaimChartResult]):
                 best_snippet = prior_art_text or "Not disclosed in prior art."
                 best_refs = []
 
-            # Determine assessment based on overlap
-            if best_overlap >= 3:
-                assessment: Literal["Yes", "No", "Partial"] = "Yes"
-            elif best_overlap >= 1:
+            assessment: Literal["Yes", "No", "Partial"] = "Partial"
+            remarks = ""
+
+            # LLM-based semantic assessment (strict JSON)
+            try:
+                if self.llm is None:
+                    raise RuntimeError("LLM client is not configured for ClaimChartGenerator")
+
+                limitation = str(feature.get("limitation") or "").strip()
+                prior_art_context = (best_snippet or "").strip()
+
+                user_prompt = (
+                    "You will be given:\n"
+                    "(1) a claim feature (limitation) and\n"
+                    "(2) a prior art excerpt.\n\n"
+                    "Task: Decide whether the prior art discloses the limitation.\n\n"
+                    "Output MUST be strict JSON only, with exactly these keys:\n"
+                    '{"assessment":"Yes|No|Partial","reasoning":"..."}\n\n'
+                    f"Limitation:\n{limitation}\n\n"
+                    f"Prior Art Excerpt:\n{prior_art_context}\n"
+                )
+
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ]
+
+                if hasattr(self.llm, "chat"):
+                    raw = self.llm.chat(messages)  # type: ignore[attr-defined]
+                elif hasattr(self.llm, "generate"):
+                    raw = self.llm.generate(prompt=user_prompt, messages=messages)  # type: ignore[attr-defined]
+                else:
+                    raise RuntimeError("Unsupported LLM client interface; expected .chat(...) or .generate(...)")
+
+                assessment, reasoning = self._parse_llm_assessment_json(str(raw))
+                remarks = reasoning
+            except Exception as e:
+                # Graceful fallback on LLM/JSON issues.
                 assessment = "Partial"
-            else:
-                assessment = "No"
+                remarks = f"LLM_ASSESSMENT_ERROR: {str(e)}"
 
             # Format disclosure text
             disclosure = self._format_disclosure(best_doc, best_snippet, best_refs)
@@ -292,7 +373,7 @@ class ClaimChartGenerator(PatentAgentSkill[ClaimChartResult]):
                 "limitation": feature["limitation"],
                 "d1_disclosure": disclosure,
                 "assessment": assessment,
-                "remarks": ""
+                "remarks": remarks,
             })
 
         # Return standardized result

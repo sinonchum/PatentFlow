@@ -127,6 +127,7 @@ def parse_docs(
     specification_text: str = "",
     examiner_preference: str = "",
     claim_type: str = "Method",
+    attorney_name: str = "",
     workflow_id: str = "",
 ) -> Dict[str, Any]:
     _set_workflow_meta(workflow_id, "Parsing Office Action", _progress_fields(1))
@@ -168,6 +169,7 @@ def parse_docs(
 
     return {
         "workflow_id": workflow_id,
+        "attorney_name": attorney_name,
         "claim_text": claim_text,
         "prior_art_text": prior_art_text,
         "office_action_text": office_action_text,
@@ -319,6 +321,7 @@ def run_patentflow_generate(
     specification_text: str = "",
     examiner_preference: str = "",
     claim_type: str = "Method",
+    attorney_name: str = "",
 ) -> Dict[str, Any]:
     """Orchestrate the generation pipeline using Celery chain + chord."""
     workflow_id = self.request.id
@@ -330,6 +333,7 @@ def run_patentflow_generate(
             specification_text=specification_text,
             examiner_preference=examiner_preference,
             claim_type=claim_type,
+            attorney_name=attorney_name,
             workflow_id=workflow_id,
         ),
         chunk_and_embed.s(),

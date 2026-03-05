@@ -141,6 +141,13 @@ export default function Workspace() {
 
   const [examinerBias, setExaminerBias] = useState("Jukka Tapaninen - Telecom");
   const [claimType, setClaimType] = useState("Method");
+  const [attorneyProfile, setAttorneyProfile] = useState<"Default" | "Sinon" | "Karine">("Default");
+  const [showMemoryEditor, setShowMemoryEditor] = useState(false);
+  const [memoryKind, setMemoryKind] = useState<"phrasing_rule" | "examiner_strategy">("phrasing_rule");
+  const [memoryDraft, setMemoryDraft] = useState("");
+  const [memorySaving, setMemorySaving] = useState(false);
+  const [memoryError, setMemoryError] = useState<string | null>(null);
+  const [memorySavedAt, setMemorySavedAt] = useState<string | null>(null);
 
   const [taskId, setTaskId] = useState<string | null>(null);
   const [taskState, setTaskState] = useState<TaskState | string | null>(null);
@@ -182,6 +189,50 @@ export default function Workspace() {
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
+  const resolvedAttorneyName = attorneyProfile === "Default" ? "" : attorneyProfile;
+
+  const handleSaveMemory = async () => {
+    setMemoryError(null);
+    setMemorySavedAt(null);
+
+    if (!resolvedAttorneyName) {
+      setMemoryError("Select an attorney profile first.");
+      return;
+    }
+
+    const text = (memoryDraft || "").trim();
+    if (!text) {
+      setMemoryError("Enter a rule or strategy to remember.");
+      return;
+    }
+
+    setMemorySaving(true);
+    try {
+      const resp = await fetch(`${API_BASE}/api/memory/${encodeURIComponent(resolvedAttorneyName)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          memoryKind === "phrasing_rule"
+            ? { phrasing_rule: text }
+            : { examiner_strategy: text }
+        ),
+      });
+
+      if (!resp.ok) {
+        const body = await resp.text();
+        throw new Error(body || `HTTP ${resp.status}`);
+      }
+
+      setMemoryDraft("");
+      setMemorySavedAt(new Date().toLocaleTimeString());
+      setShowMemoryEditor(false);
+    } catch (e) {
+      setMemoryError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setMemorySaving(false);
+    }
+  };
+
   const handleExecute = async () => {
     setIsExecuting(true);
     setTaskError(null);
@@ -203,6 +254,7 @@ export default function Workspace() {
           specification_text: specificationText,
           examiner_preference: examinerBias,
           claim_type: claimType,
+          attorney_name: resolvedAttorneyName,
         }),
       });
 
@@ -377,6 +429,23 @@ export default function Workspace() {
             <span className="text-xs text-white/30 font-medium ml-1 hidden sm:inline">v2.0</span>
           </div>
           <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-2">
+              <span className="text-xs text-zinc-400 tracking-wide">Attorney Profile:</span>
+              <select
+                value={attorneyProfile}
+                onChange={(e) => {
+                  const next = e.target.value as "Default" | "Sinon" | "Karine";
+                  setAttorneyProfile(next);
+                  setMemoryError(null);
+                  setMemorySavedAt(null);
+                }}
+                className="h-8 bg-zinc-900 text-zinc-200 text-xs border border-zinc-800 rounded-sm px-2 focus:outline-none focus:ring-0"
+              >
+                <option value="Default">Default</option>
+                <option value="Sinon">Sinon</option>
+                <option value="Karine">Karine</option>
+              </select>
+            </div>
             <span className="text-xs text-white/40 font-medium hidden md:inline">Document Processing Workspace</span>
             <div className="h-4 w-px bg-white/10 hidden md:block" />
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20">
@@ -638,6 +707,68 @@ export default function Workspace() {
                   Export
                 </Button>
               </div>
+
+              <div className="border-t border-zinc-800 bg-zinc-900/20 px-6 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMemoryEditor((v) => !v);
+                      setMemoryError(null);
+                      setMemorySavedAt(null);
+                    }}
+                    className="text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 px-2 py-1 rounded-sm transition-colors text-xs"
+                  >
+                    💾 Save edits to memory...
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {memorySavedAt && (
+                      <span className="text-xs text-zinc-500">Saved {memorySavedAt}</span>
+                    )}
+                    {resolvedAttorneyName ? (
+                      <span className="text-xs text-zinc-600">Profile: {resolvedAttorneyName}</span>
+                    ) : (
+                      <span className="text-xs text-zinc-600">Profile: Default</span>
+                    )}
+                  </div>
+                </div>
+
+                {showMemoryEditor && (
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-[160px_1fr_auto] gap-2 items-start">
+                    <select
+                      value={memoryKind}
+                      onChange={(e) => setMemoryKind(e.target.value as "phrasing_rule" | "examiner_strategy")}
+                      className="h-8 bg-zinc-900 text-zinc-200 text-xs border border-zinc-800 rounded-sm px-2 focus:outline-none focus:ring-0"
+                    >
+                      <option value="phrasing_rule">Phrasing rule</option>
+                      <option value="examiner_strategy">Examiner strategy</option>
+                    </select>
+
+                    <textarea
+                      value={memoryDraft}
+                      onChange={(e) => setMemoryDraft(e.target.value)}
+                      placeholder="Rule to remember (e.g., Always use 'terminal device' instead of 'UE')..."
+                      className="w-full min-h-[36px] h-9 bg-zinc-900 text-zinc-200 text-xs border border-zinc-800 rounded-sm px-2 py-2 leading-tight focus:outline-none focus:ring-0"
+                    />
+
+                    <button
+                      type="button"
+                      disabled={memorySaving}
+                      onClick={handleSaveMemory}
+                      className="h-8 px-3 text-xs rounded-sm border border-emerald-700/60 text-emerald-300/80 hover:text-emerald-200 hover:border-emerald-500/60 hover:bg-emerald-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {memorySaving ? "Saving" : "Save"}
+                    </button>
+
+                    {memoryError && (
+                      <div className="md:col-span-3 text-xs text-amber-200/80 border border-amber-500/20 bg-amber-500/10 rounded-sm px-2 py-1">
+                        {memoryError}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </TabsContent>
 
@@ -686,6 +817,68 @@ export default function Workspace() {
                     </table>
                   );
                 })()}
+              </div>
+
+              <div className="border-t border-zinc-800 bg-zinc-900/20 px-6 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMemoryEditor((v) => !v);
+                      setMemoryError(null);
+                      setMemorySavedAt(null);
+                    }}
+                    className="text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 px-2 py-1 rounded-sm transition-colors text-xs"
+                  >
+                    💾 Save edits to memory...
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {memorySavedAt && (
+                      <span className="text-xs text-zinc-500">Saved {memorySavedAt}</span>
+                    )}
+                    {resolvedAttorneyName ? (
+                      <span className="text-xs text-zinc-600">Profile: {resolvedAttorneyName}</span>
+                    ) : (
+                      <span className="text-xs text-zinc-600">Profile: Default</span>
+                    )}
+                  </div>
+                </div>
+
+                {showMemoryEditor && (
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-[160px_1fr_auto] gap-2 items-start">
+                    <select
+                      value={memoryKind}
+                      onChange={(e) => setMemoryKind(e.target.value as "phrasing_rule" | "examiner_strategy")}
+                      className="h-8 bg-zinc-900 text-zinc-200 text-xs border border-zinc-800 rounded-sm px-2 focus:outline-none focus:ring-0"
+                    >
+                      <option value="phrasing_rule">Phrasing rule</option>
+                      <option value="examiner_strategy">Examiner strategy</option>
+                    </select>
+
+                    <textarea
+                      value={memoryDraft}
+                      onChange={(e) => setMemoryDraft(e.target.value)}
+                      placeholder="Rule to remember (e.g., Always use 'terminal device' instead of 'UE')..."
+                      className="w-full min-h-[36px] h-9 bg-zinc-900 text-zinc-200 text-xs border border-zinc-800 rounded-sm px-2 py-2 leading-tight focus:outline-none focus:ring-0"
+                    />
+
+                    <button
+                      type="button"
+                      disabled={memorySaving}
+                      onClick={handleSaveMemory}
+                      className="h-8 px-3 text-xs rounded-sm border border-emerald-700/60 text-emerald-300/80 hover:text-emerald-200 hover:border-emerald-500/60 hover:bg-emerald-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {memorySaving ? "Saving" : "Save"}
+                    </button>
+
+                    {memoryError && (
+                      <div className="md:col-span-3 text-xs text-amber-200/80 border border-amber-500/20 bg-amber-500/10 rounded-sm px-2 py-1">
+                        {memoryError}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </TabsContent>

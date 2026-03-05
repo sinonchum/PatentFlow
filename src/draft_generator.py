@@ -381,9 +381,9 @@ You are a European patent attorney assistant. Rewrite and polish the following d
 {draft}
 """.strip()
 
-    router = PatentRouter()
-    engine = router.route(prompt, is_sensitive=True)
-    return engine.generate(prompt)
+    attorney_name = str(info.get("attorney_name") or "").strip()
+    router = PatentRouter(is_sensitive=True)
+    return router.generate(task_type="答辩策略", prompt=prompt, attorney_name=attorney_name)
 
 
 def main() -> None:
