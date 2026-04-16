@@ -140,17 +140,14 @@ def parse_docs(
         except Exception:
             pass
 
-    claim_text = (
-        "A method for wireless communication, comprising: transmitting a downlink control information (DCI) format; "
-        "determining a timing offset K0; and receiving a physical downlink shared channel (PDSCH) based on the timing offset."
-    )
+    claim_text = ""
     if specification_text and len(specification_text.strip()) > 20:
         claim_text = specification_text.strip()
-    
-    prior_art_text = "D1 discloses a wireless communication system with fixed timing relations."
+
+    prior_art_text = ""
     if specification_text and len(specification_text) > 50:
         prior_art_text = (specification_text[:200] + "...").replace("\n", " ")
-    
+
     # Load mock office action if none provided (for demo purposes)
     if not office_action_text:
         try:

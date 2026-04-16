@@ -25,6 +25,8 @@ services:
       - patentflow-net
     ports:
       - "8000:8000"
+    volumes:
+      - patentflow-data:/app/data
     depends_on:
       redis:
         condition: service_healthy
@@ -50,6 +52,8 @@ services:
       - CELERY_CONCURRENCY=1
     networks:
       - patentflow-net
+    volumes:
+      - patentflow-data:/app/data
     depends_on:
       redis:
         condition: service_healthy
@@ -74,3 +78,4 @@ networks:
 
 volumes:
   redis-data:
+  patentflow-data:

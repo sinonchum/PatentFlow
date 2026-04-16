@@ -243,5 +243,5 @@ class TranslationVerifier(PatentAgentSkill[TranslationResult]):
                 "markdown_table": "\n".join(md_lines),
                 "overall_risk": overall_risk
             },
-            warnings=[r["warnings"] for r in analysis_result if r["warnings"]]
+            warnings=[w for r in analysis_result for w in r["warnings"] if w]
         )

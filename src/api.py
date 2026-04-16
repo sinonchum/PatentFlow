@@ -115,6 +115,8 @@ def _redis_url() -> str:
     return os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 
+
+
 def _redis_client() -> redis.Redis:
     return redis.Redis.from_url(_redis_url(), decode_responses=True)
 
@@ -346,14 +348,19 @@ def add_memory(req: MemoryAddRequest) -> Dict[str, str]:
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     """Global exception handler for all unhandled exceptions."""
+    import logging
     from fastapi.responses import JSONResponse
+
+    logger = logging.getLogger("patentflow.api")
+    logger.error("Unhandled exception on %s %s: %s", request.method, request.url.path, exc, exc_info=True)
+
     return JSONResponse(
         status_code=500,
         content={
             "status": "error",
-            "error": f"INTERNAL_SERVER_ERROR: {str(exc)}",
-            "detail": "An unexpected error occurred. Please try again or contact support."
-        }
+            "error": "INTERNAL_SERVER_ERROR",
+            "detail": "An unexpected error occurred. Please try again or contact support.",
+        },
     )
 
 
