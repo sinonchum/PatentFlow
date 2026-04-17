@@ -9,7 +9,7 @@ from .base import BaseLLM, Message
 from .cloud_engine import CloudEngine
 from .local_engine import OllamaEngine
 from .mock_engine import MockEngine
-from src.memory_manager import LocalMemoryManager, format_preferences_for_system_prompt
+from src.memory_manager import LocalMemoryManager
 
 
 _DEFAULT_SENSITIVE_PATTERNS = (
@@ -92,12 +92,15 @@ class PatentRouter:
         **kwargs: object,
     ) -> str:
         attorney_name = str(kwargs.get("attorney_name") or "").strip()
-        user_id = str(kwargs.get("user_id") or "").strip()
-        if attorney_name or user_id:
+        if attorney_name:
             manager = LocalMemoryManager()
-            profile = manager.get_profile(attorney_name=attorney_name or None, user_id=user_id or None)
-            injected = format_preferences_for_system_prompt(profile)
-            if injected:
+            prefs = manager.get_preferences(attorney_name)
+            if prefs:
+                injected = (
+                    "[CRITICAL USER PREFERENCES TO FOLLOW STRICTLY]\n"
+                    f"{prefs}\n"
+                    "[/CRITICAL USER PREFERENCES]"
+                )
                 if messages is None:
                     messages = [
                         {"role": "system", "content": injected},

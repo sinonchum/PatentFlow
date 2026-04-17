@@ -62,8 +62,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    environment:
-      - NEXT_PUBLIC_API_BASE_URL=http://api:8000
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
     networks:
       - patentflow-net
     ports:

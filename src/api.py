@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 import redis
 
 from src.celery_app import celery_app
+from src.engine.router import PatentRouter
 from src.memory_manager import LocalMemoryManager
 from src.skills import ClaimChartGenerator, TranslationVerifier
 from src.tasks import run_patentflow_generate
@@ -19,7 +20,65 @@ from src.tasks import run_patentflow_generate
 memory_db = LocalMemoryManager()
 
 
+class _LLMChatAdapter:
+    """Adapts engine BaseLLM.generate() to the chat(messages) interface expected by skills."""
+
+    def __init__(self, engine):
+        self._engine = engine
+
+    def chat(self, messages, **kwargs):
+        prompt = ""
+        for m in reversed(messages):
+            if m.get("role") == "user":
+                prompt = m.get("content", "")
+                break
+        return self._engine.generate(
+            task_type="claim_chart",
+            prompt=prompt,
+            messages=messages,
+        )
+
+
+def _get_llm_client():
+    """Get an LLM client for skill usage, returns None if no engine available."""
+    try:
+        router = PatentRouter(is_sensitive=True)
+        engine = router.route()
+        # Check if it's a real engine (not mock)
+        from src.engine.mock_engine import MockEngine
+        if isinstance(engine, MockEngine):
+            return None
+        return _LLMChatAdapter(engine)
+    except Exception:
+        return None
+
+
 app = FastAPI(title="PatentFlow API", version="0.1.0")
+
+# --- API Key Authentication ---
+_PATENTFLOW_API_KEY = os.getenv("PATENTFLOW_API_KEY", "").strip()
+_PUBLIC_PATHS = {"/health", "/docs", "/openapi.json", "/redoc"}
+
+
+@app.middleware("http")
+async def api_key_auth(request, call_next):
+    """Require X-API-Key or Authorization: Bearer header when PATENTFLOW_API_KEY is set."""
+    if not _PATENTFLOW_API_KEY or request.url.path in _PUBLIC_PATHS:
+        return await call_next(request)
+
+    provided_key = request.headers.get("X-API-Key", "")
+    if not provided_key:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.lower().startswith("bearer "):
+            provided_key = auth_header[7:].strip()
+
+    if provided_key != _PATENTFLOW_API_KEY:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=401,
+            content={"status": "error", "error": "UNAUTHORIZED", "detail": "Invalid or missing API key."},
+        )
+    return await call_next(request)
 
 
 def _allowed_origins() -> List[str]:
@@ -93,6 +152,12 @@ class MemoryAddRequest(BaseModel):
     new_rule: str = Field(..., min_length=1, description="New rule to append")
 
 
+class MemorySaveRequest(BaseModel):
+    """Frontend-compatible memory save — accepts phrasing_rule or examiner_strategy."""
+    phrasing_rule: Optional[str] = Field(default=None)
+    examiner_strategy: Optional[str] = Field(default=None)
+
+
 class VerifyTranslationRequest(BaseModel):
     """Request schema for /api/verify-translation endpoint."""
     original_cn: str = Field(..., description="Original Chinese text segment", min_length=1)
@@ -113,6 +178,24 @@ class VerifyTranslationResponse(BaseModel):
 
 def _redis_url() -> str:
     return os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+
+_redis_singleton: Optional[redis.Redis] = None
+
+
+def _redis_client() -> redis.Redis:
+    global _redis_singleton
+    if _redis_singleton is None:
+        _redis_singleton = redis.Redis.from_url(_redis_url(), decode_responses=True)
+    return _redis_singleton
+
+
+_QUEUE_KEY = "patentflow:ux:queue"
+_QUEUE_SEQ_KEY = "patentflow:ux:queue:seq"
+_WORKFLOW_META_KEY_PREFIX = "patentflow:workflow:meta:"
+
+
+@app.post("/api/generate", response_model=GenerateResponse)
 
 
 
@@ -267,7 +350,8 @@ def generate_chart(req: GenerateChartRequest) -> GenerateChartResponse:
     Uses deterministic heuristic parsing for claim splitting and prior art matching.
     """
     try:
-        generator = ClaimChartGenerator()
+        llm_client = _get_llm_client()
+        generator = ClaimChartGenerator(llm_client=llm_client)
         result = generator.execute(
             claim_text=req.claim_text,
             prior_art_text=req.prior_art_text,
@@ -340,6 +424,23 @@ def add_memory(req: MemoryAddRequest) -> Dict[str, str]:
         if not ok:
             return {"status": "error", "error": "MEMORY_ADD_FAILED"}
         prefs = memory_db.get_preferences(req.attorney_id)
+        return {"status": "success", "preferences": prefs}
+    except Exception as e:
+        return {"status": "error", "error": f"MEMORY_ADD_ERROR: {str(e)}"}
+
+
+@app.post("/api/memory/{attorney_id}")
+def save_memory(attorney_id: str, req: MemorySaveRequest) -> Dict[str, str]:
+    """Frontend-compatible endpoint: POST /api/memory/{attorney_id} with phrasing_rule or examiner_strategy."""
+    try:
+        rule = req.phrasing_rule or req.examiner_strategy or ""
+        rule = rule.strip()
+        if not rule:
+            return {"status": "error", "error": "No rule provided"}
+        ok = memory_db.add_preference(attorney_id, rule)
+        if not ok:
+            return {"status": "error", "error": "MEMORY_ADD_FAILED"}
+        prefs = memory_db.get_preferences(attorney_id)
         return {"status": "success", "preferences": prefs}
     except Exception as e:
         return {"status": "error", "error": f"MEMORY_ADD_ERROR: {str(e)}"}

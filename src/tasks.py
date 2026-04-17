@@ -17,7 +17,9 @@ from src.translator import PatentTranslator  # Keep for backward compat fallback
 # Legacy adapter functions for backward compatibility
 def generate_claim_chart(claim_text: str, prior_art_text: str, office_action_text: str = "") -> Dict[str, Any]:
     """Backward-compatible adapter using new ClaimChartGenerator skill."""
-    generator = ClaimChartGenerator()
+    from src.api import _get_llm_client
+    llm_client = _get_llm_client()
+    generator = ClaimChartGenerator(llm_client=llm_client)
     result = generator.execute(
         claim_text=claim_text,
         prior_art_text=prior_art_text,

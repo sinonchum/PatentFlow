@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
 
 from .base import PatentAgentSkill, SkillResult
+from src.glossary import PATENT_GLOSSARY
 
 
 class TranslationRow(BaseModel):
@@ -44,40 +45,8 @@ class TranslationVerifier(PatentAgentSkill[TranslationResult]):
     no LLM intelligence required for critical term validation.
     """
 
-    # Proprietary 3GPP & EPO Glossary
-    # Structure: CN term -> {target: canonical EN translation, lethal_mismatch: [wrong translations]}
-    GLOSSARY = {
-        # Action / Function
-        "包括": {"target": "comprising", "lethal_mismatch": ["consisting of", "composed of"]},
-        "包含": {"target": "comprising", "lethal_mismatch": ["consisting of", "composed of"]},
-        "配置为": {"target": "configured to", "lethal_mismatch": ["suitable for", "arranged to", "adapted to"]},
-        "被配置为": {"target": "configured to", "lethal_mismatch": ["suitable for", "arranged to", "adapted to"]},
-        "确定": {"target": "determine", "lethal_mismatch": []},
-        "响应于": {"target": "in response to", "lethal_mismatch": ["based on"]},
-        "执行": {"target": "performed by", "lethal_mismatch": []},
-        "用于": {"target": "for", "lethal_mismatch": []},
-        "发送": {"target": "transmitting", "lethal_mismatch": ["sending"]},
-        "接收": {"target": "receiving", "lethal_mismatch": []},
-
-        # Condition / Dependency
-        "基于": {"target": "based on", "lethal_mismatch": ["in response to", "according to"]},
-        "根据": {"target": "according to", "lethal_mismatch": ["based on"]},
-        "当": {"target": "when", "lethal_mismatch": ["if"]},
-        "如果": {"target": "if", "lethal_mismatch": ["when"]},
-        "其中": {"target": "wherein", "lethal_mismatch": ["in which"]},
-
-        # Scope / Quantity (HIGH RISK)
-        "基本上": {"target": "substantially", "lethal_mismatch": []},
-        "大约": {"target": "approximately", "lethal_mismatch": ["about"]},
-        "多个": {"target": "a plurality of", "lethal_mismatch": ["a plurality of"]},
-        "至少一个": {"target": "at least one", "lethal_mismatch": []},
-
-        # EPO Formal Terms
-        "权利要求": {"target": "claim", "lethal_mismatch": []},
-        "说明书": {"target": "description", "lethal_mismatch": []},
-        "实施例": {"target": "embodiment", "lethal_mismatch": []},
-        "现有技术": {"target": "prior art", "lethal_mismatch": []},
-    }
+    # Glossary imported from shared src/glossary.py
+    GLOSSARY = PATENT_GLOSSARY
 
     def _highlight_cn_terms(self, text: str) -> str:
         """Mark glossary terms in CN text with **term** for frontend highlighting."""
