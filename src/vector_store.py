@@ -219,38 +219,6 @@ class PatentVectorStore:
         out.sort(key=lambda r: r.distance)
         return out
 
-    def query_with_bias(
-        self,
-        query_text: str,
-        n_results: int = 5,
-        *,
-        examiner_name: str = "",
-        examiner_key: str = "examiner",
-        match_factor: float = 0.8,
-    ) -> List[SearchResult]:
-        results = self.query_similar_logic(
-            query_text,
-            n_results=int(n_results),
-            examiner_name=examiner_name,
-        )
-
-        ex = (examiner_name or "").strip().lower()
-        if not ex:
-            return results
-
-        adjusted: List[SearchResult] = []
-        for r in results:
-            meta_val = ""
-            if isinstance(r.metadata, dict):
-                meta_val = str(r.metadata.get(examiner_key) or "").strip().lower()
-            dist = float(r.distance)
-            if meta_val and meta_val == ex:
-                dist = dist * float(match_factor)
-            adjusted.append(SearchResult(text=r.text, metadata=r.metadata, distance=dist))
-
-        adjusted.sort(key=lambda x: x.distance)
-        return adjusted
-
 
 def main() -> None:
     import argparse
