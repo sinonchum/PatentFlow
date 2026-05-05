@@ -57,6 +57,24 @@ class PatentRouter:
             return False
 
         try:
+            # OpenAI-compatible endpoints (e.g. r9s.ai) use /v1/models
+            if engine.config.openai_compatible:
+                headers = {}
+                if engine.config.api_key:
+                    headers["Authorization"] = f"Bearer {engine.config.api_key}"
+                # base_url may already include /v1, so use /models instead of /v1/models
+                base = engine.config.base_url.rstrip("/")
+                if base.endswith("/v1"):
+                    models_url = f"{base}/models"
+                else:
+                    models_url = f"{base}/v1/models"
+                resp = engine._session.get(
+                    models_url,
+                    headers=headers,
+                    timeout=5,
+                )
+                return 200 <= resp.status_code < 300
+            # Ollama native: /api/tags
             resp = engine._session.get(f"{engine.config.base_url}/api/tags", timeout=2)
             return 200 <= resp.status_code < 300
         except Exception:

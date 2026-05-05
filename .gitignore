@@ -43,3 +43,8 @@ out/
 .vercel/
 *.tsbuildinfo
 next-env.d.ts
+
+.venv/
+data/profiles.db
+data/profiles.db-shm
+data/profiles.db-wal

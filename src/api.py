@@ -190,24 +190,9 @@ def _redis_client() -> redis.Redis:
     return _redis_singleton
 
 
-_QUEUE_KEY = "patentflow:ux:queue"
-_QUEUE_SEQ_KEY = "patentflow:ux:queue:seq"
-_WORKFLOW_META_KEY_PREFIX = "patentflow:workflow:meta:"
-
-
-@app.post("/api/generate", response_model=GenerateResponse)
-
-
-
-
-def _redis_client() -> redis.Redis:
-    return redis.Redis.from_url(_redis_url(), decode_responses=True)
-
-
 _QUEUE_KEY = "patentflow:queue:z"
 _QUEUE_SEQ_KEY = "patentflow:queue:seq"
 _WORKFLOW_META_KEY_PREFIX = "patentflow:taskmeta:"
-
 
 @app.post("/api/generate", response_model=GenerateResponse)
 def generate(req: GenerateRequest) -> GenerateResponse:
