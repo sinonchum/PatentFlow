@@ -1,0 +1,130 @@
+EUROPEAN PATENT APPLICATION
+Publication Number: EP 3 579 291 A1
+Application Number: EP 18 174 632.1
+Filing Date: 28 May 2018
+Applicant: Contemporary Amperex Technology Co., Limited (CATL), Ningde (CN)
+Inventors: Chen, Qiang; Liu, Yang; Zhou, Minghui
+IPC: H02J 7/00; H01M 10/48; H01M 10/613; H01M 10/44
+Title: ADAPTIVE THERMAL GRADIENT MANAGEMENT SYSTEM FOR LITHIUM-ION BATTERY PACKS
+       WITH MULTI-STAGE CHARGING CURRENT CONTROL
+
+================================================================================
+ABSTRACT
+================================================================================
+
+The present disclosure describes a battery management system (BMS) and associated
+method for controlling the charging process of a lithium-ion battery pack comprising
+a plurality of cells. The system continuously monitors inter-cell temperature
+gradients and dynamically adjusts the charging current in multiple discrete stages
+based on predefined thermal gradient thresholds. When the temperature gradient
+between the hottest and coolest cells exceeds a first threshold, the charging current
+is reduced proportionally. When a second, higher threshold is exceeded, an active
+thermal balancing operation is initiated to redistribute heat prior to resuming
+full-rate charging. The invention enables faster average charging rates than fixed
+conservative current limits, while preventing localised thermal runaway events that
+degrade cell longevity and present safety hazards.
+
+================================================================================
+CLAIMS
+================================================================================
+
+1. A method for managing the charging of a battery pack comprising a plurality of
+lithium-ion cells (C1...Cn), the method comprising:
+    acquiring, by a battery management controller (BMC), a temperature measurement
+    Ti from each of a plurality of temperature sensors (S1...Sn), each sensor Si
+    being thermally coupled to a respective cell Ci;
+    computing a temperature gradient ΔT defined as ΔT = Tmax - Tmin, wherein Tmax
+    is the maximum temperature measured across all cells and Tmin is the minimum
+    temperature measured across all cells;
+    when ΔT < ΔT1, supplying a charging current I_charge at a maximum rated current
+    I_max determined by the state of charge (SOC) of the battery pack;
+    when ΔT1 ≤ ΔT < ΔT2, reducing the charging current I_charge to
+        I_charge = I_max × (1 - α × (ΔT - ΔT1))
+    wherein α is a current reduction coefficient and ΔT1 is a first thermal
+    gradient threshold; and
+    when ΔT ≥ ΔT2, suspending charging and activating a thermal balancing circuit
+    to reduce ΔT below ΔT1 before resuming charging at I_max,
+    wherein ΔT2 is a second thermal gradient threshold greater than ΔT1.
+
+2. The method of claim 1, wherein ΔT1 is in the range of 3°C to 8°C and ΔT2 is
+in the range of 10°C to 18°C.
+
+3. The method of claim 1 or 2, wherein α is in the range of 0.05 per °C to
+0.15 per °C.
+
+4. The method of any of claims 1 to 3, wherein the thermal balancing circuit
+comprises at least one of: a liquid cooling loop circulating coolant between cells,
+a Peltier thermoelectric element array, or a forced convection fan array.
+
+5. The method of any of claims 1 to 4, further comprising:
+    estimating a state of charge (SOC) of each individual cell Ci based on an
+    open-circuit voltage measurement OCV_i taken during a rest period of at least
+    30 seconds;
+    computing a SOC imbalance ΔSOC = SOCmax - SOCmin across all cells;
+    when ΔSOC exceeds a balance threshold δ of 5%, activating a passive or active
+    cell balancing circuit to redistribute charge from higher-SOC cells to lower-SOC
+    cells before resuming full-rate charging.
+
+6. The method of any of claims 1 to 5, wherein the temperature measurements Ti
+are sampled at a frequency of at least 1 Hz and the charging current I_charge is
+updated within 100 milliseconds of detecting a change in ΔT that crosses a
+threshold.
+
+7. A battery management system (BMS) for a lithium-ion battery pack comprising
+a plurality of cells, the system comprising:
+    a plurality of temperature sensors (S1...Sn), each thermally coupled to a
+    respective cell;
+    a battery management controller (BMC) comprising a processor and a memory
+    storing threshold values ΔT1, ΔT2, and coefficient α, the processor configured
+    to perform the method of any of claims 1 to 6;
+    a charging circuit controllable by the BMC to set a charging current I_charge
+    supplied to the battery pack; and
+    a thermal balancing circuit activatable by the BMC to reduce inter-cell
+    temperature gradients.
+
+8. The battery management system of claim 7, wherein the thermal balancing circuit
+is a liquid cooling loop comprising a pump, a heat exchanger, and a plurality of
+coolant channels routed between adjacent cells.
+
+9. A non-transitory computer-readable medium storing instructions that, when
+executed by a processor of a battery management controller, cause the processor
+to perform the method of any of claims 1 to 6.
+
+================================================================================
+DESCRIPTION (Selected Passages)
+================================================================================
+
+[0001] The present disclosure relates to battery management systems (BMS) for
+lithium-ion battery packs, and particularly to adaptive charging current control
+based on real-time inter-cell temperature gradient monitoring.
+
+[0008] Lithium-ion cells are highly sensitive to temperature non-uniformity during
+charging. When cells within a pack reach significantly different temperatures, the
+higher-temperature cells undergo accelerated electrolyte degradation and lithium
+plating, reducing cycle life and potentially triggering thermal runaway. Conventional
+BMS solutions use a conservative fixed charging current limit (e.g., 1C rate) that
+does not adapt to actual thermal conditions, leading to unnecessarily slow charging
+when gradients are low.
+
+[0017] The inventors have found that using a linear current reduction formula
+I_charge = I_max × (1 - α × (ΔT - ΔT1)) provides an unexpectedly effective balance
+between charging speed and thermal safety. Unlike binary switching (full current /
+zero current), the proportional reduction smoothly prevents gradient escalation
+without unnecessary charging interruptions.
+
+[0025] A critical inventive aspect is the two-threshold architecture: the first
+threshold ΔT1 triggers proportional current reduction (soft intervention), while the
+second threshold ΔT2 triggers full charging suspension and active thermal balancing
+(hard intervention). This staged approach is absent from prior art systems, which
+use either a single threshold (causing excessive interruptions) or no gradient-based
+control at all.
+
+[0038] In a preferred embodiment, the temperature sensors S1...Sn are NTC
+thermistors with a measurement accuracy of ±0.5°C, sampled by a 12-bit ADC at 2 Hz.
+The BMC updates I_charge within one ADC sampling period (500 ms) of any threshold
+crossing event.
+
+[0044] The SOC balancing described in claim 5 is performed independently of the
+thermal gradient management and operates during rest periods where the OCV has
+stabilised. Combining thermal gradient management with SOC balancing enables the
+system to address the two primary causes of heterogeneous cell aging simultaneously.

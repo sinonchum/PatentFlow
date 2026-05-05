@@ -162,29 +162,49 @@ export default function Workspace() {
 
   const [officeActionText, setOfficeActionText] = useState<string>("");
   const [specificationText, setSpecificationText] = useState<string>("");
+  const [isUploadingOA, setIsUploadingOA] = useState(false);
+  const [isUploadingSpec, setIsUploadingSpec] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const officeActionInputRef = useRef<HTMLInputElement>(null);
   const specificationInputRef = useRef<HTMLInputElement>(null);
 
-  const handleOfficeActionUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      setOfficeActionText(text);
-    };
-    reader.readAsText(file);
+  const uploadFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const resp = await fetch(`${API_BASE}/api/upload`, { method: "POST", body: formData });
+    const data = await resp.json();
+    if (data.status !== "success") throw new Error(data.error || "Upload failed");
+    return data.text as string;
   };
 
-  const handleSpecificationUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleOfficeActionUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
+    setIsUploadingOA(true);
+    setUploadError(null);
+    try {
+      const text = await uploadFile(file);
+      setOfficeActionText(text);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsUploadingOA(false);
+    }
+  };
+
+  const handleSpecificationUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingSpec(true);
+    setUploadError(null);
+    try {
+      const text = await uploadFile(file);
       setSpecificationText(text);
-    };
-    reader.readAsText(file);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsUploadingSpec(false);
+    }
   };
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
@@ -497,7 +517,7 @@ export default function Workspace() {
             </div>
             <div className="mt-4 border border-dashed border-white/10 rounded-lg p-3 text-center hover:border-purple-500/30 transition-colors">
               <p className="text-xs text-white/25">
-                {officeActionText ? officeActionText.slice(0, 50) + "..." : "Drop file or click to browse"}
+                {isUploadingOA ? "Extracting text…" : officeActionText ? officeActionText.slice(0, 50) + "…" : "Drop file or click to browse"}
               </p>
             </div>
           </div>
@@ -527,7 +547,7 @@ export default function Workspace() {
             </div>
             <div className="mt-4 border border-dashed border-white/10 rounded-lg p-3 text-center hover:border-blue-500/30 transition-colors">
               <p className="text-xs text-white/25">
-                {specificationText ? specificationText.slice(0, 50) + "..." : "Drop file or click to browse"}
+                {isUploadingSpec ? "Extracting text…" : specificationText ? specificationText.slice(0, 50) + "…" : "Drop file or click to browse"}
               </p>
             </div>
           </div>
@@ -572,6 +592,11 @@ export default function Workspace() {
 
           {/* Execute Button */}
           <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm p-5 flex flex-col justify-between">
+            {uploadError && (
+              <div className="mb-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-200/90">
+                {uploadError}
+              </div>
+            )}
             <div className="mb-4">
               <p className="text-sm font-medium text-white/70 mb-1">Ready to process</p>
               <p className="text-xs text-white/30 leading-relaxed">

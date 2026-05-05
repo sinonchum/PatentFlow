@@ -1,0 +1,165 @@
+EUROPEAN PATENT OFFICE
+Communication pursuant to Article 94(3) EPC
+
+Application Number:  EP 18 174 632.1
+Applicant:           Contemporary Amperex Technology Co., Limited
+Date of Communication: 22 August 2024
+Examiner:            Maria Schmidt
+Examining Division:  3.4.02 (Electrochemical Processes and Devices)
+
+Reference:           MS/cr 2024-0822-EP18174632
+
+================================================================================
+OBJECTIONS UNDER ARTICLE 94(3) EPC
+================================================================================
+
+--------------------------------------------------------------------------------
+I. PRIOR ART DOCUMENTS CITED
+--------------------------------------------------------------------------------
+
+D1: US 2019/0237813 A1 (PANASONIC CORPORATION) published 1 August 2019.
+    Priority date: 29 January 2018.
+    Cited portions: claims 1-10; paragraphs [0022]-[0061]; FIGS. 3, 5, 7.
+
+D2: EP 3 340 347 A1 (BYD CO. LTD.) published 27 June 2018.
+    Priority date: 16 December 2016.
+    Cited portions: claims 1-6; paragraphs [0014]-[0035]; FIG. 4.
+
+D3: CN 106532175 A (TIANJIN LISHEN BATTERY JOINT-STOCK CO.) published 22 March 2017.
+    Machine translation used. Cited portions: claims 1-4; paragraphs [0018]-[0029].
+
+--------------------------------------------------------------------------------
+II. OBJECTION UNDER ARTICLE 56 EPC — LACK OF INVENTIVE STEP
+--------------------------------------------------------------------------------
+
+Independent claims 1 and 7 lack inventive step (Article 56 EPC).
+
+--- Analysis of Claim 1 against D1 ---
+
+D1 (US 2019/0237813) discloses a battery management method for a lithium-ion pack
+comprising:
+
+  Feature (a): acquiring temperature measurements from a plurality of NTC thermistor
+               sensors, one per cell (D1, [0026], claim 1(a));
+  Feature (b): computing Tmax and Tmin across all cells and deriving a temperature
+               difference ΔT (D1, [0031], FIG. 3 step S104);
+  Feature (c): maintaining full charging current I_max when ΔT is below a threshold
+               T_th1 (D1, [0034], claim 3);
+  Feature (d): reducing charging current when ΔT exceeds T_th1 (D1, [0036]-[0038]).
+
+D1 thus discloses features (a) through (c) of claim 1 in their entirety.
+
+DISTINGUISHING FEATURE: Claim 1 differs from D1 in that:
+
+  (i)  The current reduction is proportional: I_charge = I_max × (1 - α × (ΔT - ΔT1)),
+       whereas D1 discloses a step-wise reduction to a fixed reduced current I_reduced
+       (D1, [0037]: "the charging current is reduced to 0.5C").
+
+  (ii) A second threshold ΔT2 triggers complete suspension of charging and activation
+       of a dedicated thermal balancing circuit (claim 1, final paragraph).
+       D1 discloses only a single threshold with one response action.
+
+OBJECTIVE TECHNICAL PROBLEM: Starting from D1, the objective technical problem can
+be formulated as: how to further optimise charging speed while maintaining thermal
+safety margins.
+
+OBVIOUSNESS ASSESSMENT:
+
+With respect to distinguishing feature (i): The use of a linear proportional current
+reduction in response to a deviation from a target setpoint is a standard control
+engineering technique (proportional controller). Applying such proportional control
+to battery charging current is an obvious design choice for the skilled person
+in battery management systems, who is familiar with PID control theory. No unexpected
+technical effect beyond what would be predicted from proportional control theory has
+been demonstrated by the Applicant.
+
+With respect to distinguishing feature (ii): D2 (EP 3 340 347) explicitly discloses
+a two-threshold temperature management scheme for lithium-ion packs:
+  - Below T1: full charging current (D2, [0018]);
+  - Between T1 and T2: reduced charging current (D2, [0020]);
+  - Above T2: charging suspended, cooling activated (D2, [0022], claim 2).
+
+The combination of D1's proportional current reduction with D2's two-threshold
+architecture is straightforward for the skilled person, both documents addressing
+the same technical problem of thermal management during charging of lithium-ion packs.
+The combination does not produce any unexpected synergistic effect.
+
+Accordingly, claim 1 does not involve an inventive step over D1 combined with D2.
+
+--- Analysis of Claims 2 and 3 ---
+
+The specific numerical ranges for ΔT1 (3-8°C), ΔT2 (10-18°C), and α (0.05-0.15/°C)
+represent routine engineering choices achievable by the skilled person through
+ordinary experimentation. The application's description ([0017]) does not provide
+evidence of an unexpected technical effect associated with these specific ranges
+compared to adjacent ranges. D3 (CN 106532175) independently discloses threshold
+values ΔT1 = 5°C and ΔT2 = 12°C in a directly comparable system (D3, claim 2),
+confirming that these values represent common general knowledge in the field.
+
+--- Analysis of Claim 5 ---
+
+The SOC balancing feature of claim 5 (OCV-based SOC measurement, 5% ΔSOC threshold,
+passive/active balancing activation) addresses a known problem in battery management
+independently of the thermal gradient management of claim 1. Such SOC balancing
+systems are well-established in the art (see e.g. D1, [0058]-[0061], which discloses
+both SOC monitoring and cell balancing as part of the same BMS). The mere combination
+of thermal gradient management with SOC balancing, without any interaction between
+the two features producing an unexpected effect, does not confer inventive step.
+
+--------------------------------------------------------------------------------
+III. OBJECTION UNDER ARTICLE 84 EPC — CLARITY AND SUPPORT
+--------------------------------------------------------------------------------
+
+3.1 Claim 1, current reduction formula:
+
+The term "maximum rated current I_max determined by the state of charge (SOC) of the
+battery pack" is unclear. I_max is conventionally understood as a fixed hardware
+limit (the maximum safe current of the cells), not a value that varies with SOC.
+The description ([0038]) refers to a "maximum rated current" without explaining
+the SOC dependency. The Applicant is requested to clarify whether:
+  (a) I_max is a fixed hardware constant; or
+  (b) I_max is a SOC-dependent lookup value (e.g., from a charging profile curve),
+and to amend the claim accordingly.
+
+3.2 Claim 3, coefficient α:
+
+The range "0.05 per °C to 0.15 per °C" is supported by the description only at
+[0017] ("the inventors have found that...") without experimental data or comparative
+examples. In accordance with Rule 42(1)(e) EPC, the application should contain at
+least one example demonstrating the effect of the claimed range relative to values
+outside the range. The Applicant is invited to provide such experimental data or
+to remove the numerical range from the claim.
+
+3.3 Claim 9 (computer-readable medium):
+
+A non-transitory computer-readable medium per se does not have a direct technical
+effect beyond storing data. The Applicant is invited to consider whether this claim
+format is appropriate under Article 52(2)(c) EPC regarding computer programs, or
+whether the claim should be reformulated as a system claim.
+
+--------------------------------------------------------------------------------
+IV. INVITATION TO APPLICANT
+--------------------------------------------------------------------------------
+
+The Applicant is invited to respond within FOUR MONTHS. Specifically:
+
+1. Amend claim 1 to add a feature clearly distinguishing it from the combination
+   of D1 and D2. The Applicant's attention is drawn to paragraph [0025] of the
+   description, which discusses the "two-threshold architecture" as a key inventive
+   aspect. However, this is already disclosed in D2. The Applicant may wish to
+   focus arguments on the specific proportional formula and its technical effects.
+
+2. Clarify the meaning of "I_max determined by the SOC" in claim 1 and provide
+   experimental support for the numerical range in claim 3.
+
+3. Consider reformulating claim 9.
+
+Yours faithfully,
+
+Maria Schmidt
+Examiner, Examining Division 3.4.02
+European Patent Office, Munich
+
+================================================================================
+END OF COMMUNICATION
+================================================================================

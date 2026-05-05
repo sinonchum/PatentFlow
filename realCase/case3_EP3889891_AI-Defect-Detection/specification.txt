@@ -1,0 +1,151 @@
+EUROPEAN PATENT APPLICATION
+Publication Number: EP 3 889 891 A1
+Application Number: EP 21 163 047.5
+Filing Date: 16 March 2021
+Applicant: Siemens Aktiengesellschaft, Munich (DE)
+Inventors: Hoffmann, Klaus; Bauer, Annika; Nguyen, Thanh-Long
+IPC: G06V 10/764; G06N 3/08; G06T 7/00; G01N 21/88
+Title: TRANSFER LEARNING SYSTEM FOR LOW-DATA VISUAL DEFECT DETECTION IN
+       INDUSTRIAL MANUFACTURING WITH GRADIENT-WEIGHTED SPATIAL LOCALISATION
+
+================================================================================
+ABSTRACT
+================================================================================
+
+A computer-implemented system and method for detecting and localising surface defects
+in manufactured components is disclosed. The method employs a convolutional neural
+network (CNN) initialised with weights pre-trained on a large general-purpose image
+dataset and fine-tuned on a domain-specific manufacturing quality dataset comprising
+fewer than 500 labelled images. Fine-tuning is performed in two phases: an initial
+phase in which only the final classification layers are trained while earlier
+convolutional layers are frozen, followed by a second phase in which all layers are
+jointly optimised with a reduced learning rate. Spatial localisation of detected
+defects is performed using gradient-weighted class activation mapping (Grad-CAM),
+producing an interpretable heat map overlaid on the source image to guide corrective
+manufacturing action. The system achieves defect detection accuracy exceeding 94%
+on an internal benchmark with only 320 labelled training images, enabling deployment
+in manufacturing environments where labelled defect data is inherently scarce.
+
+================================================================================
+CLAIMS
+================================================================================
+
+1. A computer-implemented method for detecting and localising surface defects in
+a manufactured workpiece, the method comprising:
+    acquiring, by at least one image sensor, a plurality of digital images of a
+    workpiece, each image capturing a different surface region or viewpoint;
+    extracting, by a feature extraction module implementing a convolutional neural
+    network (CNN), a feature representation from each digital image, wherein the CNN
+    is initialised with pre-trained weights obtained by training on a general-purpose
+    image classification dataset comprising at least one million labelled images;
+    fine-tuning the CNN on a domain-specific defect dataset comprising fewer than
+    500 labelled images of defective and non-defective workpieces in a two-phase
+    procedure comprising:
+        a first phase in which all convolutional layers except the final two
+        convolutional layers are frozen, and only the final two convolutional layers
+        and a classification head are trained;
+        a second phase in which all layers of the CNN are jointly optimised using a
+        learning rate that is at least one order of magnitude lower than the learning
+        rate used in the first phase;
+    classifying each acquired image as depicting a defect or no defect based on the
+    extracted feature representation; and
+    generating, for each image classified as depicting a defect, a spatial
+    localisation map indicating a location and spatial extent of the detected defect
+    within the image, wherein the spatial localisation map is computed using
+    gradient-weighted class activation mapping (Grad-CAM) applied to the final
+    convolutional layer of the fine-tuned CNN.
+
+2. The method of claim 1, wherein the general-purpose image classification dataset
+is ImageNet-1k comprising approximately 1.2 million training images across 1,000
+classes, and the CNN architecture is selected from ResNet-50, ResNet-101,
+EfficientNet-B4, or Vision Transformer (ViT-B/16).
+
+3. The method of claim 1 or 2, wherein the domain-specific defect dataset comprises
+images capturing at least three distinct defect categories selected from: surface
+scratches, material cracks, coating delamination, geometric dimensional deviations,
+and foreign material inclusions.
+
+4. The method of any of claims 1 to 3, wherein the spatial localisation map is a
+two-dimensional heat map of the same spatial dimensions as the input image, wherein
+each pixel value in the heat map represents a gradient-weighted contribution of that
+spatial location to the defect classification confidence score.
+
+5. The method of any of claims 1 to 4, wherein classifying each image further
+comprises computing a defect confidence score p ∈ [0,1], and wherein the image
+is classified as depicting a defect when p exceeds a configurable decision threshold
+θ, wherein θ is set by an operator based on a desired trade-off between false
+positive rate and false negative rate on a validation set.
+
+6. The method of any of claims 1 to 5, further comprising:
+    generating a structured defect report comprising: (i) an image identifier,
+    (ii) the defect confidence score p, (iii) a defect category label, (iv) the
+    spatial localisation map rendered as a JPEG or PNG overlay image, and (v) a
+    recommended corrective action retrieved from a lookup table indexed by defect
+    category;
+    transmitting the defect report to a manufacturing execution system (MES) via
+    an OPC-UA interface.
+
+7. A quality inspection system for detecting surface defects in manufactured
+workpieces, comprising:
+    at least one image sensor configured to acquire digital images of a workpiece
+    surface;
+    a computing unit comprising one or more processors and a memory, the memory
+    storing:
+        a fine-tuned convolutional neural network (CNN) as obtained by the method
+        of any of claims 1 to 3;
+        executable instructions that, when executed by the processors, cause the
+        computing unit to perform the classification and localisation steps of the
+        method of any of claims 1 to 6; and
+    a display interface configured to render the spatial localisation map as a colour-
+    coded overlay on the acquired image of the workpiece.
+
+8. The quality inspection system of claim 7, further comprising a robotic arm
+configured to receive a rejection signal from the computing unit and divert defective
+workpieces from the production line to a quarantine area.
+
+================================================================================
+DESCRIPTION (Selected Passages)
+================================================================================
+
+[0001] The present disclosure relates to automated visual quality inspection in
+industrial manufacturing, and more particularly to a transfer learning approach for
+convolutional neural network-based defect detection with spatial localisation under
+scarce training data conditions.
+
+[0009] A fundamental challenge in deploying deep learning-based defect detection in
+manufacturing environments is the scarcity of labelled training data. Acquiring and
+labelling images of defective parts is time-consuming and expensive, particularly
+for low-frequency defect types. Standard deep CNNs require tens of thousands of
+labelled images for reliable training from random weight initialisation, making
+them impractical for most manufacturing inspection scenarios.
+
+[0017] Transfer learning from general image classification models (e.g. ImageNet-
+pretrained CNNs) addresses the data scarcity problem by leveraging visual features
+learned from large datasets. However, naive fine-tuning (updating all layers
+simultaneously) frequently leads to catastrophic forgetting of general visual
+features and overfitting to the small domain-specific dataset. The two-phase fine-
+tuning procedure of the present invention—freezing early layers in the first phase
+and jointly optimising all layers with a reduced learning rate in the second phase—
+has been found by the inventors to mitigate both catastrophic forgetting and
+overfitting simultaneously, yielding an improvement of 11 percentage points in
+detection accuracy on the internal benchmark compared to single-phase fine-tuning.
+
+[0028] The Grad-CAM technique (Selvaraju et al., "Grad-CAM: Visual Explanations
+from Deep Networks via Gradient-based Localization," ICCV 2017) computes the
+gradient of the class score with respect to the feature maps of the final
+convolutional layer. These gradients are global-average-pooled to produce neuron
+importance weights, which are then used to produce a weighted combination of the
+feature maps. The resulting activation map, when upsampled to input image resolution
+and overlaid as a heat map, indicates which spatial regions most strongly contributed
+to the classification decision. A key advantage of applying Grad-CAM to the final
+convolutional layer specifically—as claimed—is that this layer retains the highest
+spatial specificity while also encoding the most task-relevant semantic features
+after fine-tuning.
+
+[0035] In experimental validation on an internal dataset of metallic turbine blade
+surfaces comprising 320 labelled training images (210 non-defective, 110 defective
+across 4 defect categories), the two-phase fine-tuned ResNet-50 achieved 94.3%
+classification accuracy and 89.1% defect localisation accuracy (measured as IoU > 0.5
+between predicted and ground-truth defect bounding boxes). This significantly exceeds
+the 83.2% classification accuracy achieved by the same architecture trained from
+scratch on the same dataset, and the 88.7% achieved by single-phase fine-tuning.

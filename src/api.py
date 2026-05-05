@@ -5,7 +5,11 @@ import os
 from typing import Any, Dict, List, Optional
 
 from celery.result import AsyncResult
-from fastapi import FastAPI
+import io
+
+import fitz  # PyMuPDF
+from docx import Document as DocxDocument
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import redis
@@ -13,6 +17,8 @@ import redis
 from src.celery_app import celery_app
 from src.engine.router import PatentRouter
 from src.memory_manager import LocalMemoryManager
+from src.services.epo_client import EPOClient
+from src.services.tasks import process_epo_request
 from src.skills import ClaimChartGenerator, TranslationVerifier
 from src.tasks import run_patentflow_generate
 
@@ -132,10 +138,15 @@ class StatusResponse(BaseModel):
 
 class GenerateChartRequest(BaseModel):
     """Request schema for /api/generate-chart endpoint."""
-    claim_text: str = Field(..., description="Patent claim text to analyze", min_length=10)
+    claim_text: str = Field(default="", description="Patent claim text to analyze (required unless publication_number is set)")
     prior_art_text: str = Field(default="", description="Prior art text (fallback if office_action_text empty)")
     office_action_text: str = Field(default="", description="Office action text with D1/D2 references")
     attorney_id: str = Field(default="Default", description="Attorney identity for local preference memory")
+    publication_number: str = Field(
+        default="",
+        description="EPO publication number (e.g. EP3654128). When set and claim_text is empty, "
+                    "claims are fetched automatically via OPS. Requires EPO_ENABLED=true.",
+    )
 
 
 class GenerateChartResponse(BaseModel):
@@ -156,6 +167,31 @@ class MemorySaveRequest(BaseModel):
     """Frontend-compatible memory save — accepts phrasing_rule or examiner_strategy."""
     phrasing_rule: Optional[str] = Field(default=None)
     examiner_strategy: Optional[str] = Field(default=None)
+
+
+class EPOIngestRequest(BaseModel):
+    """Request schema for /api/epo/ingest endpoint."""
+    publication_number: str = Field(
+        default="",
+        description="EPO publication number (e.g. EP3654128). Triggers OPS full-text fetch.",
+    )
+    application_number: str = Field(
+        default="",
+        description="EPO application number (e.g. EP21158904). Triggers Register dossier sync.",
+    )
+    use_language_bridge: bool = Field(
+        default=True,
+        description="Automatically find an English-language family member for non-EN patents.",
+    )
+    claim_type: str = Field(default="Method", description="Claim category for chart generation")
+    attorney_name: str = Field(default="", description="Attorney identity for preference memory")
+
+
+class EPOIngestResponse(BaseModel):
+    """Response schema for /api/epo/ingest endpoint."""
+    task_id: str
+    queue_position: Optional[int] = None
+    queue_size: Optional[int] = None
 
 
 class VerifyTranslationRequest(BaseModel):
@@ -327,28 +363,124 @@ def status(task_id: str) -> StatusResponse:
     return payload
 
 
-@app.post("/api/generate-chart", response_model=GenerateChartResponse)
-def generate_chart(req: GenerateChartRequest) -> GenerateChartResponse:
+@app.post("/api/epo/ingest", response_model=EPOIngestResponse)
+def epo_ingest(req: EPOIngestRequest) -> EPOIngestResponse:
+    """Dispatch an EPO ingest + claim chart pipeline to Celery.
+
+    Accepts a publication number (fetches from OPS) and/or an application number
+    (syncs the latest Art. 94(3) communication from Register). Returns a task_id
+    for status polling via GET /api/status/{task_id}.
+
+    Requires EPO_ENABLED=true and valid EPO_CONSUMER_KEY / EPO_CONSUMER_SECRET in .env.
     """
-    Generate a claim chart comparing claim features against prior art.
-    
+    from fastapi import HTTPException
+
+    _epo_enabled = os.getenv("EPO_ENABLED", "false").lower() == "true"
+    if not _epo_enabled:
+        raise HTTPException(
+            status_code=503,
+            detail="EPO integration is disabled. Set EPO_ENABLED=true in .env to enable.",
+        )
+
+    if not req.publication_number and not req.application_number:
+        raise HTTPException(
+            status_code=422,
+            detail="At least one of publication_number or application_number is required.",
+        )
+
+    async_result = process_epo_request.delay(
+        publication_number=req.publication_number,
+        application_number=req.application_number,
+        use_language_bridge=req.use_language_bridge,
+        claim_type=req.claim_type,
+        attorney_name=req.attorney_name,
+    )
+
+    queue_position: Optional[int] = None
+    queue_size: Optional[int] = None
+    try:
+        r = _redis_client()
+        seq = r.incr(_QUEUE_SEQ_KEY)
+        r.zadd(_QUEUE_KEY, {async_result.id: float(seq)})
+        rank = r.zrank(_QUEUE_KEY, async_result.id)
+        if rank is not None:
+            queue_position = int(rank) + 1
+        qsz = r.zcard(_QUEUE_KEY)
+        queue_size = int(qsz) if qsz is not None else None
+    except Exception:
+        pass
+
+    return EPOIngestResponse(
+        task_id=async_result.id,
+        queue_position=queue_position,
+        queue_size=queue_size,
+    )
+
+
+@app.post("/api/generate-chart", response_model=GenerateChartResponse)
+async def generate_chart(req: GenerateChartRequest) -> GenerateChartResponse:
+    """Generate a claim chart comparing claim features against prior art.
+
+    If publication_number is set and claim_text is empty, claims are fetched
+    automatically from EPO OPS (requires EPO_ENABLED=true).
     Uses deterministic heuristic parsing for claim splitting and prior art matching.
     """
+    claim_text = req.claim_text.strip()
+    prior_art_text = req.prior_art_text
+    office_action_text = req.office_action_text
+
+    if req.publication_number and not claim_text:
+        _epo_enabled = os.getenv("EPO_ENABLED", "false").lower() == "true"
+        if not _epo_enabled:
+            return GenerateChartResponse(
+                status="error",
+                chart=[],
+                cited_docs=[],
+                error=(
+                    "EPO integration is disabled. Set EPO_ENABLED=true in .env "
+                    "to use publication_number, or provide claim_text directly."
+                ),
+                warnings=[],
+            )
+        try:
+            async with EPOClient() as epo:
+                metadata = await epo.smart_fetch(req.publication_number)
+            claim_text = metadata.claims_text
+            if not prior_art_text and not office_action_text:
+                prior_art_text = metadata.abstract
+        except Exception as e:
+            return GenerateChartResponse(
+                status="error",
+                chart=[],
+                cited_docs=[],
+                error=f"EPO_FETCH_ERROR ({req.publication_number}): {str(e)}",
+                warnings=["EPO API call failed; provide claim_text directly as a fallback."],
+            )
+
+    if not claim_text:
+        return GenerateChartResponse(
+            status="error",
+            chart=[],
+            cited_docs=[],
+            error="No claim text available. Provide claim_text or a valid publication_number.",
+            warnings=[],
+        )
+
     try:
         llm_client = _get_llm_client()
         generator = ClaimChartGenerator(llm_client=llm_client)
         result = generator.execute(
-            claim_text=req.claim_text,
-            prior_art_text=req.prior_art_text,
-            office_action_text=req.office_action_text,
+            claim_text=claim_text,
+            prior_art_text=prior_art_text,
+            office_action_text=office_action_text,
             attorney_id=req.attorney_id,
         )
-        
+
         return GenerateChartResponse(
             status=result.status,
             chart=result.data.get("chart", []),
             cited_docs=result.data.get("cited_docs", []),
-            warnings=result.warnings
+            warnings=result.warnings,
         )
     except Exception as e:
         return GenerateChartResponse(
@@ -356,7 +488,7 @@ def generate_chart(req: GenerateChartRequest) -> GenerateChartResponse:
             chart=[],
             cited_docs=[],
             error=f"CLAIM_CHART_GENERATION_ERROR: {str(e)}",
-            warnings=["Failed to generate claim chart"]
+            warnings=["Failed to generate claim chart"],
         )
 
 
@@ -429,6 +561,46 @@ def save_memory(attorney_id: str, req: MemorySaveRequest) -> Dict[str, str]:
         return {"status": "success", "preferences": prefs}
     except Exception as e:
         return {"status": "error", "error": f"MEMORY_ADD_ERROR: {str(e)}"}
+
+
+@app.post("/api/upload")
+async def upload_document(file: UploadFile = File(...)) -> Dict[str, Any]:
+    """Extract plain text from an uploaded PDF, DOCX, or TXT file.
+
+    Used by the frontend to convert uploaded documents to text before sending
+    to the pipeline. Handles PDF via PyMuPDF, DOCX via python-docx, and
+    falls back to UTF-8 decoding for plain text files.
+    """
+    filename = file.filename or "document"
+    content = await file.read()
+    ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
+
+    try:
+        if ext == "pdf":
+            doc = fitz.open(stream=content, filetype="pdf")
+            pages_text = [page.get_text() for page in doc]
+            doc.close()
+            text = "\n\n".join(t for t in pages_text if t.strip())
+            if not text.strip():
+                return {
+                    "status": "error",
+                    "error": "PDF appears to be scanned (image-only). Please use a text-based PDF or paste the text directly.",
+                    "text": "",
+                    "filename": filename,
+                }
+            return {"status": "success", "text": text, "filename": filename, "pages": len(pages_text)}
+
+        if ext == "docx":
+            doc_x = DocxDocument(io.BytesIO(content))
+            text = "\n".join(p.text for p in doc_x.paragraphs if p.text.strip())
+            return {"status": "success", "text": text, "filename": filename}
+
+        # TXT or any other format — decode as UTF-8
+        text = content.decode("utf-8", errors="replace")
+        return {"status": "success", "text": text, "filename": filename}
+
+    except Exception as e:
+        return {"status": "error", "error": f"Extraction failed: {str(e)}", "text": "", "filename": filename}
 
 
 @app.exception_handler(Exception)

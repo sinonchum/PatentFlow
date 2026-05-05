@@ -1,0 +1,121 @@
+EUROPEAN PATENT APPLICATION
+Publication Number: EP 3 654 128 A1
+Application Number: EP 19 208 437.4
+Filing Date: 11 November 2019
+Applicant: Huawei Technologies Co., Ltd., Shenzhen (CN)
+Inventors: Zhang, Lei; Wang, Fei; Li, Jian
+IPC: H04W 72/04; H04L 5/00
+Title: METHOD AND APPARATUS FOR DOWNLINK SCHEDULING IN NEW RADIO SYSTEMS
+
+================================================================================
+ABSTRACT
+================================================================================
+
+The present disclosure relates to a method and apparatus for scheduling a Physical
+Downlink Shared Channel (PDSCH) in a 5G New Radio (NR) wireless communication system.
+The method enables a terminal device to determine, from Downlink Control Information
+(DCI), a timing offset K0 that specifies the number of slots between a Physical
+Downlink Control Channel (PDCCH) slot and the starting slot of the corresponding
+PDSCH. The timing offset K0 is selected from a time domain resource allocation (TDRA)
+mapping table pre-configured by the network via Radio Resource Control (RRC) signaling.
+The invention improves scheduling flexibility in mixed-numerology deployments and
+reduces latency for time-sensitive services in 5G NR.
+
+================================================================================
+CLAIMS
+================================================================================
+
+1. A method for downlink scheduling in a New Radio (NR) wireless communication
+system, the method being performed by a terminal device and comprising:
+    receiving Downlink Control Information (DCI) from a network device on a Physical
+    Downlink Control Channel (PDCCH) transmitted in a first slot n, wherein the DCI
+    comprises a time domain resource assignment (TDRA) field having a value index k;
+    determining a timing offset K0 by looking up the value index k in a time domain
+    resource allocation (TDRA) mapping table, wherein K0 indicates a number of slots
+    between slot n and a starting slot of a Physical Downlink Shared Channel (PDSCH)
+    scheduled by the DCI, and wherein the TDRA mapping table is pre-configured by
+    the network device via Radio Resource Control (RRC) signaling;
+    determining a starting symbol S and a symbol length L of the PDSCH allocation
+    from the TDRA mapping table using the value index k; and
+    receiving the PDSCH on a time-frequency resource defined by slot n+K0, starting
+    symbol S, and symbol length L.
+
+2. The method of claim 1, wherein the TDRA mapping table comprises at least four
+rows each specifying a respective tuple (K0, S, L, PDSCH mapping type).
+
+3. The method of claim 1 or 2, wherein the DCI is DCI format 1_0 or DCI format 1_1
+as defined in 3GPP TS 38.212.
+
+4. The method of any of claims 1 to 3, wherein the timing offset K0 takes a value
+in the set {0, 1, 2, 3, 4, 5} slots.
+
+5. The method of any of claims 1 to 4, further comprising:
+    transmitting Hybrid Automatic Repeat reQuest Acknowledgement (HARQ-ACK)
+    feedback for the PDSCH in a slot n+K0+K1, wherein K1 is determined from a
+    PDSCH-to-HARQ feedback timing indicator field in the DCI.
+
+6. The method of any of claims 1 to 5, wherein when the TDRA mapping table is not
+configured by RRC, the terminal device applies a default TDRA mapping table as
+specified in 3GPP TS 38.214 Table 5.1.2.1.1-2.
+
+7. A terminal device for downlink scheduling in a New Radio (NR) wireless
+communication system, comprising:
+    a receiver configured to receive Downlink Control Information (DCI) on a Physical
+    Downlink Control Channel (PDCCH) transmitted in a first slot n, wherein the DCI
+    comprises a time domain resource assignment (TDRA) field having a value index k;
+    a processor configured to:
+        determine a timing offset K0 by looking up the value index k in a TDRA
+        mapping table pre-configured via Radio Resource Control (RRC) signaling;
+        determine a starting symbol S and a symbol length L of a Physical Downlink
+        Shared Channel (PDSCH) allocation from the TDRA mapping table; and
+    the receiver further configured to receive the PDSCH on slot n+K0 using the
+    determined starting symbol S and symbol length L.
+
+8. The terminal device of claim 7, wherein the processor is further configured to
+apply a default TDRA mapping table when no RRC-configured table is available.
+
+9. A network device for downlink scheduling in a New Radio (NR) wireless
+communication system, comprising:
+    a processor configured to:
+        configure a time domain resource allocation (TDRA) mapping table for a
+        terminal device via Radio Resource Control (RRC) signaling;
+        determine a TDRA field value index k corresponding to a desired timing offset
+        K0, starting symbol S, and symbol length L for a PDSCH transmission;
+    a transmitter configured to:
+        transmit Downlink Control Information (DCI) comprising the TDRA field value
+        index k on a PDCCH in slot n; and
+        transmit the PDSCH on slot n+K0 using the starting symbol S and symbol
+        length L corresponding to value index k.
+
+================================================================================
+DESCRIPTION (Selected Passages)
+================================================================================
+
+[0001] The present disclosure relates to wireless communications and, more
+particularly, to methods and apparatus for Physical Downlink Shared Channel (PDSCH)
+time domain resource allocation in 5G New Radio (NR) systems.
+
+[0012] In 5G NR, the time domain resource allocation for PDSCH is defined by a
+three-tuple (K0, S, L), where K0 is the slot offset between the PDCCH and PDSCH,
+S is the starting OFDM symbol within the PDSCH slot, and L is the number of
+consecutive OFDM symbols allocated for the PDSCH. These parameters are signaled
+dynamically via the DCI TDRA field, which indexes into a configurable mapping table.
+
+[0023] A critical advantage of the present invention over prior art systems is the
+ability to dynamically select K0 per-DCI rather than configuring it statically via
+RRC alone. This enables the network to adapt PDSCH scheduling latency to the service
+requirements of individual user equipment (UE) transmissions within the same slot.
+
+[0031] FIG. 3 illustrates an exemplary TDRA mapping table configured by RRC with
+four entries: Row 1: (K0=0, S=2, L=12, Type A), Row 2: (K0=1, S=0, L=14, Type A),
+Row 3: (K0=2, S=3, L=11, Type B), Row 4: (K0=4, S=0, L=7, Type B). The network
+selects the appropriate row via the 2-bit TDRA field in DCI format 1_0.
+
+[0044] The default TDRA mapping table (used in absence of RRC configuration) is
+defined in 3GPP TS 38.214 Table 5.1.2.1.1-2 and provides backward compatibility
+with UEs that do not support dynamic TDRA table configuration.
+
+[0057] In mixed-numerology scenarios, the timing offset K0 must account for the
+numerology of the PDCCH and PDSCH, which may differ when the UE is scheduled across
+different bandwidth parts (BWPs) with different subcarrier spacings (SCS). In such
+cases, K0 is expressed in units of the PDSCH numerology.

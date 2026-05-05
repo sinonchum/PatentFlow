@@ -1,0 +1,141 @@
+EUROPEAN PATENT OFFICE
+Communication pursuant to Article 94(3) EPC
+
+Application Number:  EP 19 208 437.4
+Applicant:           Huawei Technologies Co., Ltd.
+Date of Communication: 14 March 2024
+Examiner:            Jukka Tapaninen
+Examining Division:  2.4.03 (Mobile Communication Systems)
+
+Reference:           ET/bp 2024-0314-EP19208437
+
+================================================================================
+OBJECTIONS UNDER ARTICLE 94(3) EPC
+================================================================================
+
+The present application has been examined. It does not meet the requirements of
+the European Patent Convention for the following reasons:
+
+--------------------------------------------------------------------------------
+I. PRIOR ART DOCUMENTS CITED
+--------------------------------------------------------------------------------
+
+D1: WO 2018/128361 A1 (SAMSUNG ELECTRONICS CO., LTD.) published 12 July 2018.
+    Cited portions: claims 1-8; paragraphs [0031]-[0055]; FIG. 4-6.
+
+D2: EP 3 379 882 A1 (NOKIA SOLUTIONS AND NETWORKS OY) published 19 September 2018.
+    Cited portions: claims 1-5; paragraphs [0018]-[0034]; FIG. 2-3.
+
+D3: 3GPP TS 38.214 V15.2.0 (Release 15, June 2018), Section 5.1.2.1, Table
+    5.1.2.1.1-2 (publicly available standard, not a patent document).
+
+--------------------------------------------------------------------------------
+II. OBJECTION UNDER ARTICLE 56 EPC — LACK OF INVENTIVE STEP
+--------------------------------------------------------------------------------
+
+Claims 1-6, 7-8, and 9 lack inventive step (Article 56 EPC) in view of D1 alone,
+or alternatively in view of D1 combined with D2.
+
+--- Claim 1 ---
+
+D1 (WO 2018/128361) discloses a method for downlink scheduling in a New Radio (NR)
+system comprising:
+
+  (a) receiving DCI on a PDCCH in slot n comprising a time domain resource
+      assignment field (D1, paragraph [0033], claim 1);
+  (b) determining a timing offset K0 from a TDRA mapping table indexed by the
+      TDRA field value (D1, paragraphs [0038]-[0041], FIG. 4);
+  (c) determining starting symbol S and length L from the same mapping table
+      (D1, paragraph [0042], Table 1);
+  (d) receiving the PDSCH in slot n+K0 on the determined time-frequency resource
+      (D1, claim 2, paragraph [0044]).
+
+The Applicant argues that claim 1 is distinguished from D1 in that the TDRA mapping
+table is "pre-configured by the network device via Radio Resource Control (RRC)
+signaling." However, D1 explicitly discloses that the UE receives the TDRA mapping
+table via higher-layer signaling (D1, paragraph [0036]: "the TDRA table may be
+provided to the UE via RRC configuration messages"). The skilled person understands
+that higher-layer signaling in the 3GPP NR context refers to RRC signaling, as
+confirmed by D3 (TS 38.214, Section 5.1.2.1.1, paragraph 1: "If the higher layer
+parameter pdsch-TimeDomainAllocationList is configured...").
+
+The Examining Division therefore concludes that claim 1 does not involve an inventive
+step over D1 alone (Article 56 EPC).
+
+--- Claim 5 ---
+
+Claim 5 further specifies that HARQ-ACK feedback is transmitted in slot n+K0+K1,
+where K1 is from a PDSCH-to-HARQ feedback timing indicator in the DCI.
+
+D1 discloses HARQ-ACK feedback timing in paragraph [0051]: "the UE shall transmit
+HARQ-ACK feedback after K1 slots from the PDSCH reception slot." The use of K1 as
+a DCI-signaled offset is an obvious implementation consistent with the 3GPP NR
+framework (D3, Section 9.1.2). No unexpected technical effect results from this
+combination.
+
+--- Claims 2, 3, 4 ---
+
+These dependent claims specify parameters (four-row table, DCI formats 1_0/1_1,
+K0 value range 0-5) that represent straightforward design choices well within the
+standard 3GPP NR framework as documented in D3, and do not contribute to inventive
+step.
+
+--- Alternative attack: D1 + D2 ---
+
+Should the Applicant argue that D1 does not explicitly disclose RRC configuration
+of the TDRA table, D2 (EP 3 379 882) discloses precisely this: "the base station
+transmits the time domain resource allocation configuration table to the user
+equipment via Radio Resource Control (RRC) message IE pdsch-TimeDomainAllocationList"
+(D2, paragraph [0022]). Combining D1 with D2 would be obvious to the skilled person,
+since both address the same problem of flexible PDSCH scheduling in NR.
+
+--------------------------------------------------------------------------------
+III. OBJECTION UNDER ARTICLE 84 EPC — CLARITY
+--------------------------------------------------------------------------------
+
+Claim 7 (terminal device): The feature "a receiver configured to receive DCI" is
+unclear because a receiver is typically a hardware component that passively receives
+all transmitted signals. The claim should specify how the receiver is configured to
+selectively process PDCCH-carried DCI, or alternatively reformulate as a software-
+defined functional unit.
+
+Claim 9 (network device): The expression "configure a TDRA mapping table...via RRC
+signaling" encompasses the case where the table is not yet transmitted, which creates
+ambiguity about when the configuration is deemed complete. The Applicant is invited
+to clarify whether "configure" refers to generating the table, transmitting it, or
+confirming its reception by the UE.
+
+--------------------------------------------------------------------------------
+IV. INVITATION TO APPLICANT
+--------------------------------------------------------------------------------
+
+The Applicant is invited to file, within FOUR MONTHS of the date of this
+communication, observations and/or amendments that overcome the above objections.
+
+Specifically, the Applicant is invited to:
+
+1. Provide arguments distinguishing claim 1 from D1, in particular with respect to
+   the RRC configuration feature, citing specific passages from D1 that do not
+   disclose this feature.
+
+2. Alternatively, amend claim 1 to add a feature not disclosed in D1 (e.g., the
+   specific mechanism by which K0 dynamically adapts to cross-numerology scheduling
+   scenarios, as described in paragraph [0057] of the application).
+
+3. Address the clarity objections in claims 7 and 9.
+
+Should the Applicant fail to respond within the set time limit, the application may
+be refused under Article 97(2) EPC.
+
+The Examining Division remains available for an interview should the Applicant wish
+to discuss potential claim amendments before filing a formal response.
+
+Yours faithfully,
+
+Jukka Tapaninen
+Examiner, Examining Division 2.4.03
+European Patent Office, Munich
+
+================================================================================
+END OF COMMUNICATION
+================================================================================

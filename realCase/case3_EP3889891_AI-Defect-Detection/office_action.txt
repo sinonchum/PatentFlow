@@ -1,0 +1,208 @@
+EUROPEAN PATENT OFFICE
+Communication pursuant to Article 94(3) EPC
+
+Application Number:  EP 21 163 047.5
+Applicant:           Siemens Aktiengesellschaft
+Date of Communication: 5 February 2025
+Examiner:            Hans Mueller
+Examining Division:  3.5.06 (Image and Video Analysis)
+
+Reference:           HM/jl 2025-0205-EP21163047
+
+================================================================================
+OBJECTIONS UNDER ARTICLE 94(3) EPC
+================================================================================
+
+--------------------------------------------------------------------------------
+I. PRIOR ART DOCUMENTS CITED
+--------------------------------------------------------------------------------
+
+D1: US 2019/0065878 A1 (INTERNATIONAL BUSINESS MACHINES CORPORATION)
+    published 28 February 2019. Priority date: 24 August 2017.
+    Cited portions: claims 1-12; paragraphs [0031]-[0079]; FIGS. 5-9.
+
+D2: EP 3 467 733 A1 (SIEMENS AKTIENGESELLSCHAFT) published 17 April 2019.
+    Priority date: 13 October 2017.
+    Cited portions: claims 1-8; paragraphs [0020]-[0052]; FIGS. 3-6.
+    NOTE: The Applicant is the same legal entity as the proprietor of D2. This
+    does not affect the prior art status of D2 under Article 54(2) EPC.
+
+D3: Selvaraju, R.R. et al., "Grad-CAM: Visual Explanations from Deep Networks
+    via Gradient-based Localization," Proceedings of ICCV 2017, pp. 618-626.
+    (Non-patent literature, publicly available October 2017.)
+
+D4: Yosinski, J. et al., "How transferable are features in deep neural networks?"
+    Proceedings of NIPS 2014, pp. 3320-3328.
+    (Non-patent literature, publicly available December 2014.)
+
+--------------------------------------------------------------------------------
+II. OBJECTION UNDER ARTICLES 52(1) AND 56 EPC
+--------------------------------------------------------------------------------
+
+--- A. Preliminary Remark on Patentability of AI/ML Methods (Article 52 EPC) ---
+
+A method implemented by a computer program is patentable under Article 52 EPC only
+if it produces a further technical effect going beyond the normal physical interactions
+between the program and the computer. The claimed method must be assessed for its
+technical character in its entirety.
+
+The claimed method is directed to detecting manufacturing defects—a technical problem
+with direct industrial application. The computing steps serve to solve this technical
+problem. The Examining Division accepts, for the purposes of this examination, that
+the claimed method has sufficient technical character under Article 52 EPC. However,
+the Applicant should be aware that this assessment may be revisited if the claims
+are broadened in scope.
+
+--- B. Lack of Inventive Step (Article 56 EPC) ---
+
+Independent claims 1 and 7 lack inventive step over D1 in combination with D3
+and D4.
+
+ANALYSIS OF CLAIM 1:
+
+D1 (US 2019/0065878) discloses a computer-implemented method for detecting defects
+in manufactured components using a CNN, comprising:
+
+  (a) Acquiring digital images of a workpiece using an image sensor
+      (D1, [0034], claim 1(a));
+  (b) Feature extraction using a CNN initialised with ImageNet pre-trained weights
+      (D1, [0041]-[0043]: "We initialise the convolutional backbone with weights
+      pre-trained on ImageNet-1k to leverage general visual feature representations");
+  (c) Fine-tuning on a domain-specific defect dataset (D1, [0048]-[0052], claim 3);
+  (d) Binary classification: defect / no defect (D1, claim 1(d), [0055]);
+  (e) Defect localisation using a class activation mapping technique (D1, [0061]:
+      "spatial attention maps are generated to highlight discriminative regions").
+
+D1 thus discloses the entirety of the feature-extraction and classification steps.
+
+DISTINGUISHING FEATURES: Claim 1 differs from D1 in:
+
+  (i)  The fine-tuning is a two-phase procedure with layer freezing in phase 1 and
+       joint optimisation with reduced learning rate in phase 2.
+  (ii) The spatial localisation specifically uses Grad-CAM on the final convolutional
+       layer (as opposed to D1's unspecified "spatial attention maps").
+  (iii) The domain-specific dataset is limited to fewer than 500 labelled images.
+
+OBVIOUSNESS:
+
+Regarding distinguishing feature (i): The technique of progressively unfreezing
+layers during fine-tuning ("discriminative fine-tuning" or "gradual unfreezing")
+is a well-established method in transfer learning, documented extensively in the
+literature. D4 (Yosinski et al., 2014) demonstrates experimentally that lower
+convolutional layers contain general features while higher layers contain task-
+specific features, providing the scientific basis for freezing early layers.
+The skilled person, wishing to fine-tune a pre-trained CNN on a small dataset
+without overfitting, would directly consult D4 and implement progressive unfreezing
+as an obvious technical measure. No unexpected effect beyond what is predicted by
+D4's experimental analysis has been demonstrated.
+
+Regarding distinguishing feature (ii): Grad-CAM is explicitly disclosed in D3
+(Selvaraju et al., 2017) as a method for spatial localisation of CNN class
+activations using the final convolutional layer. D3 states: "Grad-CAM uses the
+gradients of any target concept flowing into the final convolutional layer to
+produce a coarse localization map." D1's "spatial attention maps" is a broader
+disclosure that encompasses Grad-CAM as a specific implementation. The skilled
+person would consult D3—a seminal and widely cited publication in computer vision—
+as an obvious choice of spatial localisation technique to implement within D1's
+framework. The use of Grad-CAM specifically on the final convolutional layer is
+the standard application of the technique as taught in D3 and requires no inventive
+step.
+
+Regarding distinguishing feature (iii): Specifying that the training dataset
+comprises "fewer than 500 labelled images" is a characterisation of the operating
+conditions, not a technical limitation of the method itself. The method of claim 1
+does not exclude datasets of 500 or more images; it merely defines a boundary
+condition. Furthermore, the achievable accuracy with small datasets is a consequence
+of the transfer learning approach (itself obvious over D1+D4) and the effectiveness
+of Grad-CAM (obvious from D3), rather than an independent contribution of the
+claimed method.
+
+CONCLUSION: Claim 1 does not involve an inventive step over D1 combined with D3
+and D4 (Article 56 EPC).
+
+--- Analysis of Claims 2 and 3 ---
+
+Claim 2 (ImageNet-1k dataset, ResNet-50/ResNet-101/EfficientNet-B4/ViT-B/16):
+These are the most commonly used architectures and datasets in transfer learning
+for image classification and represent standard choices in the field, as confirmed
+by D1 ([0041]) and numerous textbook references.
+
+Claim 3 (three distinct defect categories): This is a straightforward limitation
+on training data content that does not add a technical feature beyond defining
+experimental conditions.
+
+--- Analysis of Claims 5 and 6 ---
+
+Claim 5 (configurable decision threshold θ): Using a configurable threshold to
+balance false positive and false negative rates in a binary classifier is a standard
+ROC analysis technique that does not add inventive step.
+
+Claim 6 (structured defect report + OPC-UA interface): Generating a report and
+transmitting it via a standard industrial protocol (OPC-UA, IEC 62541) represents
+straightforward system integration. D2 (EP 3 467 733, also by Siemens) explicitly
+discloses integrating a defect detection system with a manufacturing execution system
+(MES) via an OPC-UA interface (D2, [0047]-[0050], claim 5).
+
+--------------------------------------------------------------------------------
+III. OBJECTION UNDER ARTICLE 84 EPC — CLARITY
+--------------------------------------------------------------------------------
+
+3.1 Claim 1, "general-purpose image classification dataset comprising at least one
+million labelled images":
+
+This feature defines the pre-training dataset by size but not by content. A dataset
+of one million randomly collected images would not necessarily yield useful pre-
+trained weights for defect detection. The Applicant is invited to clarify whether
+the claim is intended to encompass any dataset of this size, or specifically datasets
+of the type used for large-scale image classification (e.g. ImageNet-class datasets).
+
+3.2 Claim 1, "at least one order of magnitude lower":
+
+This expression is mathematically clear (factor of 10) but the Applicant has not
+explained whether this refers to the absolute learning rate value or the ratio of
+learning rates between phases. If the phase-1 learning rate is 1e-3 and the phase-2
+learning rate is 1e-4, the ratio is exactly one order of magnitude; if both phases
+use the same scheduler, the comparison may be ambiguous. The Applicant is invited
+to specify the learning rate ratio unambiguously.
+
+3.3 Claim 7, "fine-tuned CNN as obtained by the method of claims 1 to 3":
+
+A product-by-process claim (a stored model "as obtained by" a process) is
+permissible under EPC practice only when the product cannot be sufficiently
+characterised by its structural features. The Applicant should confirm that the
+fine-tuned CNN cannot be defined by its weight values or architecture directly,
+or reformulate claim 7 as a pure method or system claim.
+
+--------------------------------------------------------------------------------
+IV. INVITATION TO APPLICANT
+--------------------------------------------------------------------------------
+
+The Applicant is invited to respond within FOUR MONTHS. The Examining Division
+notes the following potential avenues for overcoming the inventive step objection:
+
+1. The description at [0017] and [0035] reports a specific quantitative improvement
+   of 11 percentage points in detection accuracy compared to single-phase fine-tuning,
+   and 94.3% accuracy with only 320 labelled images. If the Applicant can demonstrate
+   that this effect is unexpected and attributable specifically to the claimed two-
+   phase procedure (and not merely to transfer learning in general), this may support
+   an inventive step argument. The Applicant is invited to provide a comparative
+   experimental declaration comparing the claimed two-phase fine-tuning against
+   progressive unfreezing methods disclosed in the literature (e.g. D4).
+
+2. Alternatively, the Applicant may consider limiting the claims to a specific
+   application domain (e.g. metallic turbine blade surface inspection), specific
+   CNN architectures, or a specific quantitative performance metric, provided these
+   limitations have adequate support in the description.
+
+3. The Applicant's attention is drawn to Rule 137(3) EPC regarding the admissibility
+   of amendments.
+
+Yours faithfully,
+
+Hans Mueller
+Examiner, Examining Division 3.5.06
+European Patent Office, Munich
+
+================================================================================
+END OF COMMUNICATION
+================================================================================

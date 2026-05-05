@@ -13,7 +13,7 @@ celery_app = Celery(
     "patentflow",
     broker=_redis_url(),
     backend=_redis_url(),
-    include=["src.tasks"],
+    include=["src.tasks", "src.services.tasks"],
 )
 
 celery_app.conf.update(
