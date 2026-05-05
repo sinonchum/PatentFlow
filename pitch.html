@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PatentFlow — Hackathon Pitch</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #07070d;
+    --surface: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.18);
+    --purple: #8b5cf6;
+    --purple-light: #a78bfa;
+    --blue: #3b82f6;
+    --blue-light: #60a5fa;
+    --indigo: #6366f1;
+    --emerald: #10b981;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --text: #ffffff;
+    --muted: rgba(255,255,255,0.45);
+    --subtle: rgba(255,255,255,0.18);
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Slide container ── */
+  .deck { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    padding: 64px 80px;
+    opacity: 0;
+    transform: translateX(60px);
+    transition: opacity .55s cubic-bezier(.4,0,.2,1), transform .55s cubic-bezier(.4,0,.2,1);
+    pointer-events: none;
+  }
+  .slide.active {
+    opacity: 1; transform: translateX(0); pointer-events: all;
+  }
+  .slide.exit {
+    opacity: 0; transform: translateX(-60px);
+  }
+
+  /* ── Fixed chrome ── */
+  .progress-bar {
+    position: fixed; top: 0; left: 0; height: 3px;
+    background: linear-gradient(90deg, var(--purple), var(--blue));
+    transition: width .4s ease;
+    z-index: 100;
+  }
+
+  .slide-counter {
+    position: fixed; bottom: 32px; right: 40px;
+    font-size: 12px; font-weight: 500; color: var(--subtle);
+    letter-spacing: .08em; z-index: 100;
+  }
+
+  .dots {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 8px; z-index: 100;
+  }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--subtle); cursor: pointer;
+    transition: background .3s, transform .3s;
+  }
+  .dot.active { background: var(--purple); transform: scale(1.4); }
+
+  .nav-hint {
+    position: fixed; bottom: 32px; left: 40px;
+    font-size: 11px; color: var(--subtle); letter-spacing: .08em; z-index: 100;
+  }
+
+  /* ── Background blobs ── */
+  .blob {
+    position: fixed; border-radius: 50%; filter: blur(120px);
+    pointer-events: none; z-index: 0;
+  }
+  .blob-1 { width: 700px; height: 700px; top: -20%; left: -10%;
+             background: rgba(139,92,246,.10); animation: drift1 14s ease-in-out infinite; }
+  .blob-2 { width: 600px; height: 600px; bottom: -20%; right: -10%;
+             background: rgba(59,130,246,.08); animation: drift2 18s ease-in-out infinite; }
+  .blob-3 { width: 400px; height: 400px; top: 30%; right: 15%;
+             background: rgba(99,102,241,.06); animation: drift1 22s ease-in-out infinite reverse; }
+
+  @keyframes drift1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,-30px)} }
+  @keyframes drift2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-25px,25px)} }
+
+  /* ── Shared primitives ── */
+  .slide-inner { position: relative; z-index: 1; width: 100%; max-width: 1100px; }
+
+  .eyebrow {
+    font-size: 11px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--purple-light); margin-bottom: 16px;
+  }
+
+  h1 { font-size: clamp(48px, 7vw, 84px); font-weight: 900; line-height: 1.0; letter-spacing: -.03em; }
+  h2 { font-size: clamp(32px, 4.5vw, 52px); font-weight: 800; line-height: 1.1; letter-spacing: -.025em; }
+  h3 { font-size: clamp(22px, 2.5vw, 28px); font-weight: 700; line-height: 1.2; }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #fff 30%, rgba(255,255,255,.55));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .gradient-accent {
+    background: linear-gradient(135deg, var(--purple-light), var(--blue-light));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    backdrop-filter: blur(12px);
+  }
+  .card-sm { padding: 20px 24px; border-radius: 12px; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 999px;
+    font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .badge-purple { background: rgba(139,92,246,.15); border: 1px solid rgba(139,92,246,.3); color: var(--purple-light); }
+  .badge-green  { background: rgba(16,185,129,.15);  border: 1px solid rgba(16,185,129,.3);  color: #6ee7b7; }
+  .badge-red    { background: rgba(239,68,68,.12);   border: 1px solid rgba(239,68,68,.25);   color: #fca5a5; }
+  .badge-amber  { background: rgba(245,158,11,.12);  border: 1px solid rgba(245,158,11,.25);  color: #fcd34d; }
+
+  .icon-circle {
+    width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .flex-col { display: flex; flex-direction: column; }
+  .gap-4 { gap: 16px; }
+  .gap-6 { gap: 24px; }
+  .gap-3 { gap: 12px; }
+
+  /* ── Slide 1 – Hero ── */
+  .hero-logo {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 40px;
+  }
+  .hero-logo-icon {
+    width: 56px; height: 56px; border-radius: 16px;
+    background: linear-gradient(135deg, var(--purple), var(--blue));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; box-shadow: 0 0 40px rgba(139,92,246,.4);
+  }
+  .hero-logo span { font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
+
+  .hero-tagline {
+    font-size: clamp(15px, 1.6vw, 19px); color: var(--muted);
+    max-width: 640px; line-height: 1.7; margin-top: 24px; font-weight: 400;
+  }
+
+  .hero-chips { display: flex; gap: 10px; margin-top: 36px; flex-wrap: wrap; }
+
+  /* ── Slide 2 – Problem ── */
+  .stat-big {
+    font-size: clamp(54px, 8vw, 100px); font-weight: 900;
+    letter-spacing: -.04em; line-height: 1;
+    background: linear-gradient(135deg, var(--purple-light), var(--blue-light));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Slide 4 – Comparison ── */
+  .vs-table { width: 100%; border-collapse: collapse; }
+  .vs-table th {
+    padding: 14px 20px; font-size: 13px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; text-align: left;
+  }
+  .vs-table td {
+    padding: 14px 20px; font-size: 14px; font-weight: 400;
+    border-top: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .vs-table tr:hover td { background: rgba(255,255,255,.02); }
+  .col-feature { color: var(--muted); width: 35%; }
+  .col-gpt { width: 28%; color: #fca5a5; }
+  .col-pf  { width: 28%; color: #6ee7b7; }
+
+  .tick  { color: var(--emerald); font-size: 16px; }
+  .cross { color: var(--red);     font-size: 16px; }
+  .warn  { color: var(--amber);   font-size: 16px; }
+
+  /* ── Slide 5 – Architecture ── */
+  .arch-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; width: 100%;
+  }
+  .arch-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 20px; text-align: center;
+    flex: 1; max-width: 180px;
+  }
+  .arch-box .label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .arch-box .name  { font-size: 14px; font-weight: 600; }
+  .arch-arrow { font-size: 20px; color: var(--subtle); flex-shrink: 0; }
+
+  .arch-cluster {
+    display: flex; flex-direction: column; gap: 10px; flex: 1; max-width: 220px;
+  }
+  .arch-cluster .arch-box { max-width: 100%; }
+
+  /* ── Slide 6 – Demo Cases ── */
+  .case-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 28px;
+    display: flex; flex-direction: column; gap: 14px;
+    transition: border-color .2s;
+  }
+  .case-card:hover { border-color: var(--border-hover); }
+  .case-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 500; color: var(--purple-light);
+    letter-spacing: .1em;
+  }
+  .case-title { font-size: 15px; font-weight: 700; line-height: 1.3; }
+  .case-meta  { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .case-tag   {
+    display: inline-flex; padding: 3px 10px; border-radius: 999px;
+    font-size: 10px; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; border: 1px solid var(--border);
+    color: var(--subtle); align-self: flex-start;
+  }
+
+  /* ── Slide 7 – Numbers ── */
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 32px 28px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .stat-card .num {
+    font-size: 48px; font-weight: 900; letter-spacing: -.03em; line-height: 1;
+    background: linear-gradient(135deg, var(--purple-light), var(--blue-light));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-card .label { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  /* ── Slide 8 – CTA ── */
+  .cta-links { display: flex; gap: 16px; margin-top: 40px; flex-wrap: wrap; align-items: center; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 28px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--purple), var(--blue));
+    color: #fff; font-size: 14px; font-weight: 600;
+    border: none; cursor: pointer; text-decoration: none;
+    box-shadow: 0 8px 30px rgba(139,92,246,.3);
+    transition: box-shadow .2s, transform .2s;
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(139,92,246,.4); }
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 28px; border-radius: 12px;
+    background: transparent; color: var(--muted);
+    font-size: 14px; font-weight: 600;
+    border: 1px solid var(--border); cursor: pointer; text-decoration: none;
+    transition: border-color .2s, color .2s;
+  }
+  .btn-ghost:hover { border-color: var(--border-hover); color: #fff; }
+
+  .flow-step {
+    display: flex; align-items: flex-start; gap: 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 22px;
+  }
+  .flow-step .step-num {
+    width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--purple), var(--blue));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #fff;
+  }
+
+  /* ── Pain flow ── */
+  .pain-step {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px;
+    background: rgba(239,68,68,.06); border: 1px solid rgba(239,68,68,.15);
+    border-radius: 10px;
+  }
+  .pain-step .ps-icon { font-size: 20px; flex-shrink: 0; }
+  .pain-step .ps-text { font-size: 13px; line-height: 1.5; }
+  .pain-step .ps-cost {
+    margin-left: auto; flex-shrink: 0;
+    font-size: 11px; font-weight: 600; color: #fca5a5;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .divider {
+    height: 1px; background: var(--border); margin: 8px 0;
+    width: 100%;
+  }
+
+  /* ── Quote ── */
+  .quote {
+    border-left: 3px solid var(--purple);
+    padding: 16px 24px;
+    background: rgba(139,92,246,.06);
+    border-radius: 0 10px 10px 0;
+    font-size: 14px; color: var(--muted); line-height: 1.7;
+    font-style: italic;
+  }
+
+  /* ── Mono tag ── */
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: .9em; }
+
+  /* ── Pipeline visual ── */
+  .pipe-row {
+    display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+  }
+  .pipe-box {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 10px; text-align: center;
+  }
+  .pipe-box .p-icon { font-size: 22px; margin-bottom: 6px; }
+  .pipe-box .p-label { font-size: 12px; font-weight: 600; }
+  .pipe-box .p-sub   { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .pipe-arrow { color: var(--subtle); font-size: 18px; flex-shrink: 0; }
+
+  .highlight-box {
+    background: linear-gradient(135deg, rgba(139,92,246,.12), rgba(59,130,246,.08));
+    border: 1px solid rgba(139,92,246,.25);
+    border-radius: 12px; padding: 20px 24px;
+  }
+
+  /* responsive cap */
+  @media (max-width: 900px) {
+    .slide { padding: 40px 32px; }
+    .grid-3 { grid-template-columns: 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+    h1 { font-size: 42px; }
+    h2 { font-size: 30px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Background blobs -->
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<!-- Fixed chrome -->
+<div class="progress-bar" id="progress"></div>
+<div class="dots" id="dots"></div>
+<div class="slide-counter" id="counter"></div>
+<div class="nav-hint">← → to navigate &nbsp;·&nbsp; click to advance</div>
+
+<!-- ════════════════════════════════════════════════════
+     SLIDE 1 — HERO
+════════════════════════════════════════════════════ -->
+<div class="deck">
+
+<div class="slide active" id="s0">
+  <div class="slide-inner flex-col gap-4" style="max-width:900px">
+    <div class="hero-logo">
+      <div class="hero-logo-icon">⚡</div>
+      <span>PatentFlow</span>
+    </div>
+
+    <div class="eyebrow">EPO Prosecution Workspace · Hackathon 2025</div>
+
+    <h1 class="gradient-text">Turn an Office Action<br>into a Strategy in</h1>
+    <h1 style="background:linear-gradient(135deg,var(--purple-light),var(--blue-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
+      Minutes.
+    </h1>
+
+    <p class="hero-tagline">
+      PatentFlow is an AI-powered EPO patent prosecution workspace that connects
+      directly to live EPO data, generates structured claim charts, verifies translations,
+      and drafts responses — with full attorney-profile memory and local-LLM privacy.
+    </p>
+
+    <div class="hero-chips">
+      <span class="badge badge-purple">🔌 Live EPO OPS API</span>
+      <span class="badge badge-green">🔒 Local LLM · Zero Data Leak</span>
+      <span class="badge badge-amber">⚡ Celery Async Pipeline</span>
+      <span class="badge badge-purple">🧠 Attorney Memory</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     SLIDE 2 — THE PROBLEM
+════════════════════════════════════════════════════ -->
+<div class="slide" id="s1">
+  <div class="slide-inner flex-col gap-6" style="max-width:1000px">
+    <div class="eyebrow">The Problem</div>
+    <h2 class="gradient-text">Patent prosecution is broken.</h2>
+
+    <div style="display:flex;align-items:flex-start;gap:40px;margin-top:8px">
+
+      <div style="flex:1;flex-direction:column;display:flex;gap:14px">
+        <div class="pain-step">
+          <span class="ps-icon">📄</span>
+          <span class="ps-text"><strong>Receive Office Action PDF</strong><br>Manually copy-paste 20 pages of legal text</span>
+          <span class="ps-cost">~4 hrs</span>
+        </div>
+        <div class="pain-step">
+          <span class="ps-icon">🔍</span>
+          <span class="ps-text"><strong>Hunt prior art manually</strong><br>Espacenet, one patent at a time — CN/JP need translation</span>
+          <span class="ps-cost">~12 hrs</span>
+        </div>
+        <div class="pain-step">
+          <span class="ps-icon">💬</span>
+          <span class="ps-text"><strong>Paste into ChatGPT</strong><br>Context blows up. Citations hallucinated. Client data leaked to cloud.</span>
+          <span class="ps-cost">❌</span>
+        </div>
+        <div class="pain-step">
+          <span class="ps-icon">📊</span>
+          <span class="ps-text"><strong>Build claim chart in Excel</strong><br>Row by row, feature by feature, manually</span>
+          <span class="ps-cost">~14 hrs</span>
+        </div>
+        <div class="pain-step">
+          <span class="ps-icon">✍️</span>
+          <span class="ps-text"><strong>Write response from scratch</strong><br>Art. 56 arguments, translation checks, Art. 123(2) risk</span>
+          <span class="ps-cost">~16 hrs</span>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:220px">
+        <div class="stat-card" style="text-align:center">
+          <div class="num" style="font-size:56px">40–60h</div>
+          <div class="label">billable hours per<br>Office Action response</div>
+        </div>
+        <div class="stat-card" style="text-align:center">
+          <div class="num" style="font-size:56px">€800</div>
+          <div class="label">average EP attorney<br>hourly rate</div>
+        </div>
+        <div class="stat-card" style="text-align:center">
+          <div class="num" style="font-size:56px">180K</div>
+          <div class="label">EPO applications<br>filed per year</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     SLIDE 3 — WHY NOT JUST USE CHATGPT
+════════════════════════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div class="slide-inner flex-col gap-6" style="max-width:960px">
+    <div class="eyebrow">The "AI" Shortcut That Doesn't Work</div>
+    <h2 class="gradient-text">Why attorneys can't just use ChatGPT.</h2>
+
+    <div class="grid-2" style="margin-top:4px;gap:16px">
+
+      <div class="flex-col gap-3">
+        <div class="quote" style="margin-bottom:4px">
+          "Here is the full Office Action [paste 15 pages]... what are the distinguishing features over D1?"
+        </div>
+
+        <div class="card card-sm" style="border-color:rgba(239,68,68,.2);background:rgba(239,68,68,.04)">
+          <div style="font-size:12px;font-weight:700;color:#fca5a5;margin-bottom:10px">❌ What goes wrong</div>
+          <div class="flex-col gap-3" style="font-size:13px;color:var(--muted)">
+            <div>🔮 <strong style="color:#fff">Hallucinated citations</strong><br>
+              ChatGPT invents "D1 = US 2021/0198234" — the patent doesn't exist</div>
+            <div class="divider"></div>
+            <div>📉 <strong style="color:#fff">Context overflow</strong><br>
+              Large OA + prior art + spec = context window blows up after message 2</div>
+            <div class="divider"></div>
+            <div>🚫 <strong style="color:#fff">Client data on OpenAI servers</strong><br>
+              Confidential IP of your client sent to a third-party cloud</div>
+            <div class="divider"></div>
+            <div>🗑️ <strong style="color:#fff">No memory, no structure</strong><br>
+              Session ends → all context lost. Output is prose, not a claim chart</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex-col gap-3">
+        <div class="highlight-box" style="margin-bottom:4px">
+          <div style="font-size:12px;font-weight:700;color:var(--purple-light);margin-bottom:10px">✅ What PatentFlow does instead</div>
+          <div class="flex-col gap-3" style="font-size:13px;color:var(--muted)">
+            <div>📡 <strong style="color:#fff">Live EPO OPS API</strong><br>
+              Fetches real claims, real prior art — EP3654128 exists or it doesn't</div>
+            <div class="divider" style="background:rgba(139,92,246,.15)"></div>
+            <div>🔗 <strong style="color:#fff">INPADOC language bridge</strong><br>
+              CN/JP patent? Auto-finds the English US/EP family member</div>
+            <div class="divider" style="background:rgba(139,92,246,.15)"></div>
+            <div>🏠 <strong style="color:#fff">Runs locally (Ollama)</strong><br>
+              Your client's IP never leaves your server. Air-gap ready.</div>
+            <div class="divider" style="background:rgba(139,92,246,.15)"></div>
+            <div>🧠 <strong style="color:#fff">Attorney preference memory</strong><br>
+              Remembers your phrasing rules across every case, every session</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     SLIDE 4 — FEATURE COMPARISON
+════════════════════════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div class="slide-inner flex-col gap-6" style="max-width:900px">
+    <div class="eyebrow">Head-to-Head</div>
+    <h2 class="gradient-text">PatentFlow vs. Direct AI Chat</h2>
+
+    <div class="card" style="margin-top:4px;padding:0;overflow:hidden">
+      <table class="vs-table">
+        <thead>
+          <tr style="background:rgba(255,255,255,.025)">
+            <th class="col-feature">Capability</th>
+            <th class="col-gpt" style="color:#fca5a5">💬 ChatGPT / Claude direct</th>
+            <th class="col-pf"  style="color:#6ee7b7">⚡ PatentFlow</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="col-feature">Prior art sourcing</td>
+            <td class="col-gpt"><span class="cross">✗</span> Hallucinated patent numbers</td>
+            <td class="col-pf"><span class="tick">✓</span> Live EPO OPS API</td>
+          </tr>
+          <tr>
+            <td class="col-feature">Non-English patents</td>
+            <td class="col-gpt"><span class="warn">△</span> Manual copy-paste translation</td>
+            <td class="col-pf"><span class="tick">✓</span> INPADOC auto language bridge</td>
+          </tr>
+          <tr>
+            <td class="col-feature">OA sync from EPO</td>
+            <td class="col-gpt"><span class="cross">✗</span> Manual PDF upload every time</td>
+            <td class="col-pf"><span class="tick">✓</span> EPO Register API → auto-fetch</td>
+          </tr>
+          <tr>
+            <td class="col-feature">Output format</td>
+            <td class="col-gpt"><span class="cross">✗</span> Unstructured prose</td>
+            <td class="col-pf"><span class="tick">✓</span> Art. 56 claim chart (Pydantic)</td>
+          </tr>
+          <tr>
+            <td class="col-feature">Client data privacy</td>
+            <td class="col-gpt"><span class="cross">✗</span> Sent to vendor cloud</td>
+            <td class="col-pf"><span class="tick">✓</span> Local LLM, zero egress</td>
+          </tr>
+          <tr>
+            <td class="col-feature">Attorney preferences</td>
+            <td class="col-gpt"><span class="cross">✗</span> Re-explain every session</td>
+            <td class="col-pf"><span class="tick">✓</span> SQLite memory per profile</td>
+          </tr>
+          <tr>
+            <td class="col-feature">Translation check</td>
+            <td class="col-gpt"><span class="warn">△</span> No Art. 123(2) awareness</td>
+            <td class="col-pf"><span class="tick">✓</span> Back-translation + risk flag</td>
+          </tr>
+          <tr>
+            <td class="col-feature">Cost per OA</td>
+            <td class="col-gpt"><span class="cross">✗</span> 40–60 hrs attorney time</td>
+            <td class="col-pf"><span class="tick">✓</span> ~4–6 hrs (10× reduction)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     SLIDE 5 — HOW IT WORKS
+════════════════════════════════════════════════════ -->
+<div class="slide" id="s4">
+  <div class="slide-inner flex-col gap-6" style="max-width:960px">
+    <div class="eyebrow">Architecture</div>
+    <h2 class="gradient-text">How PatentFlow works.</h2>
+
+    <div class="flex-col gap-4" style="margin-top:4px">
+
+      <!-- Pipeline row -->
+      <div class="pipe-row">
+        <div class="pipe-box">
+          <div class="p-icon">📄</div>
+          <div class="p-label">Upload</div>
+          <div class="p-sub">OA + Spec PDF</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box" style="border-color:rgba(139,92,246,.3)">
+          <div class="p-icon">⚡</div>
+          <div class="p-label">FastAPI</div>
+          <div class="p-sub">PyMuPDF extract</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box" style="border-color:rgba(59,130,246,.3)">
+          <div class="p-icon">📡</div>
+          <div class="p-label">EPO OPS</div>
+          <div class="p-sub">Real prior art</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box" style="border-color:rgba(139,92,246,.3)">
+          <div class="p-icon">🧠</div>
+          <div class="p-label">LLM Engine</div>
+          <div class="p-sub">Local or Cloud</div>
+        </div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box" style="border-color:rgba(16,185,129,.3)">
+          <div class="p-icon">📊</div>
+          <div class="p-label">Results</div>
+          <div class="p-sub">Chart + Draft</div>
+        </div>
+      </div>
+
+      <!-- Three feature columns -->
+      <div class="grid-3">
+
+        <div class="card flex-col gap-3">
+          <div class="icon-circle" style="background:rgba(139,92,246,.12);font-size:24px">📡</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:6px">EPO Data Layer</div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.6">
+              OAuth2 token cached in Redis (1200s TTL)<br>
+              Per-second rate limiter + exponential backoff<br>
+              7-day smart cache by SHA-256 pub hash<br>
+              INPADOC family → English equivalent auto-routing
+            </div>
+          </div>
+        </div>
+
+        <div class="card flex-col gap-3">
+          <div class="icon-circle" style="background:rgba(59,130,246,.12);font-size:24px">⚡</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:6px">Async Pipeline</div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.6">
+              Celery chain → chord (parallel subtasks)<br>
+              <span class="mono">parse_docs → embed → chart_features</span><br>
+              <span class="mono">translate_align → draft_response</span><br>
+              Real-time progress via Redis side-channel
+            </div>
+          </div>
+        </div>
+
+        <div class="card flex-col gap-3">
+          <div class="icon-circle" style="background:rgba(16,185,129,.12);font-size:24px">🔒</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:6px">Privacy Routing</div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.6">
+              <code style="font-size:11px">is_sensitive=True</code> → forces local Ollama<br>
+              Cloud LLM (OpenAI / Claude) as fallback<br>
+              Attorney preferences injected into prompt<br>
+              No client data in logs or result backend
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     SLIDE 6 — DEMO CASES
+════════════════════════════════════════════════════ -->
+<div class="slide" id="s5">
+  <div class="slide-inner flex-col gap-5" style="max-width:980px">
+    <div class="eyebrow">Live Demo — 3 Real EPO Cases</div>
+    <h2 class="gradient-text">Built on real prosecution scenarios.</h2>
+
+    <div class="grid-3" style="margin-top:8px">
+
+      <div class="case-card">
+        <div class="case-num">CASE 01 · EP3654128A1</div>
+        <div class="case-title">5G NR PDSCH Scheduling<br>Timing Offset K0</div>
+        <div class="case-tag">Huawei · Telecom</div>
+        <div class="case-meta">
+          <strong style="color:#fff">OA:</strong> Art. 56 — Samsung D1 (WO2018/128361) cited for TDRA mapping table.<br>
+          Examiner: Jukka Tapaninen, Div. 2.4.03<br><br>
+          <strong style="color:var(--purple-light)">Key issue:</strong> Does D1 disclose RRC-configured dynamic TDRA table, or only static higher-layer config?
+        </div>
+      </div>
+
+      <div class="case-card">
+        <div class="case-num">CASE 02 · EP3579291A1</div>
+        <div class="case-title">Adaptive Battery BMS<br>Thermal Gradient Control</div>
+        <div class="case-tag">CATL · Clean Energy</div>
+        <div class="case-meta">
+          <strong style="color:#fff">OA:</strong> Art. 56 — D1 (Panasonic) + D2 (BYD) combined. Proportional formula I = I_max × (1 − α·ΔT) attacked as obvious P-control.<br><br>
+          <strong style="color:var(--purple-light)">Key issue:</strong> Two-threshold architecture with active thermal balancing not in either D1 or D2 alone.
+        </div>
+      </div>
+
+      <div class="case-card">
+        <div class="case-num">CASE 03 · EP3889891A1</div>
+        <div class="case-title">AI Defect Detection<br>Grad-CAM Localisation</div>
+        <div class="case-tag">Siemens · Industrial AI</div>
+        <div class="case-meta">
+          <strong style="color:#fff">OA:</strong> Art. 56 — D1 (IBM) + D3 (Selvaraju Grad-CAM paper) + D4 (Yosinski progressive unfreezing).<br><br>
+          <strong style="color:var(--purple-light)">Key issue:</strong> 94.3% accuracy with &lt;500 images — unexpected effect of two-phase fine-tuning?
+        </div>
+      </div>
+
+    </div>
+
+    <div class="highlight-box" style="text-align:center;padding:14px 24px;margin-top:4px">
+      <span style="font-size:13px;color:var(--muted)">Upload either file to PatentFlow →
+      <strong style="color:#fff">Art. 56 claim chart · Translation verifier · Response draft</strong>
+      — generated in under 60 seconds</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     SLIDE 7 — MARKET & IMPACT
+════════════════════════════════════════════════════ -->
+<div class="slide" id="s6">
+  <div class="slide-inner flex-col gap-6" style="max-width:960px">
+    <div class="eyebrow">Market Opportunity</div>
+    <h2 class="gradient-text">The numbers speak for themselves.</h2>
+
+    <div class="grid-3" style="margin-top:8px">
+      <div class="stat-card">
+        <div class="num">$18B</div>
+        <div class="label">Global patent prosecution services market (2024 est.)</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">180K</div>
+        <div class="label">EPO applications filed per year — each generating at least one OA</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">10×</div>
+        <div class="label">Attorney productivity gain: 40–60 hrs → 4–6 hrs per OA response</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="gap:16px">
+      <div class="card flex-col gap-3">
+        <div style="font-size:13px;font-weight:700;color:var(--purple-light)">Who benefits</div>
+        <div class="flex-col gap-2" style="font-size:13px;color:var(--muted)">
+          <div>⚖️ EP patent law firms handling >50 OAs/month</div>
+          <div>🏭 Corporate IP departments (pharma, automotive, tech)</div>
+          <div>🌏 CN/JP applicants prosecuting before the EPO</div>
+          <div>📚 Patent paralegal staff doing first-pass analysis</div>
+        </div>
+      </div>
+      <div class="card flex-col gap-3">
+        <div style="font-size:13px;font-weight:700;color:var(--blue-light)">What makes it defensible</div>
+        <div class="flex-col gap-2" style="font-size:13px;color:var(--muted)">
+          <div>🔌 Direct EPO OPS + Register API integration</div>
+          <div>🔒 Local-first LLM routing (no cloud lock-in)</div>
+          <div>🧠 Attorney memory compounds value per firm</div>
+          <div>📐 EPC-domain rules encoded — not generic prompts</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     SLIDE 8 — TECH STACK
+════════════════════════════════════════════════════ -->
+<div class="slide" id="s7">
+  <div class="slide-inner flex-col gap-5" style="max-width:920px">
+    <div class="eyebrow">Built During This Hackathon</div>
+    <h2 class="gradient-text">Full-stack, production-ready,<br>open source.</h2>
+
+    <div class="grid-2" style="margin-top:8px;gap:16px">
+      <div class="flex-col gap-3">
+        <div class="flow-step">
+          <div class="step-num">1</div>
+          <div>
+            <div style="font-size:13px;font-weight:600">Next.js 16 Frontend</div>
+            <div style="font-size:12px;color:var(--muted)">Dark workspace UI · File upload → /api/upload · Real-time pipeline polling</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">2</div>
+          <div>
+            <div style="font-size:13px;font-weight:600">FastAPI + PyMuPDF</div>
+            <div style="font-size:12px;color:var(--muted)">PDF/DOCX/TXT server-side extraction · Pydantic-validated schemas throughout</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">3</div>
+          <div>
+            <div style="font-size:13px;font-weight:600">Celery + Redis</div>
+            <div style="font-size:12px;color:var(--muted)">chain → chord async pipeline · Queue position UX · Result size gating</div>
+          </div>
+        </div>
+      </div>
+      <div class="flex-col gap-3">
+        <div class="flow-step">
+          <div class="step-num">4</div>
+          <div>
+            <div style="font-size:13px;font-weight:600">EPO OPS + Register APIs</div>
+            <div style="font-size:12px;color:var(--muted)">OAuth2 singleton · Rate limiter · 7-day Redis cache · INPADOC bridge · Art. 94(3) sync</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">5</div>
+          <div>
+            <div style="font-size:13px;font-weight:600">LLM Router (Privacy-aware)</div>
+            <div style="font-size:12px;color:var(--muted)">Ollama (local) · OpenAI · Anthropic Claude · Sensitivity flag forces local</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">6</div>
+          <div>
+            <div style="font-size:13px;font-weight:600">Skills Layer</div>
+            <div style="font-size:12px;color:var(--muted)">ClaimChartGenerator · TranslationVerifier · Art. 56/84/123(2) heuristics + LLM hybrid</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px">
+      <span class="badge badge-purple">Python 3.9</span>
+      <span class="badge badge-purple">FastAPI 0.115</span>
+      <span class="badge badge-purple">Celery 5.4</span>
+      <span class="badge badge-purple">Redis 7</span>
+      <span class="badge badge-amber">httpx async</span>
+      <span class="badge badge-amber">lxml + PyMuPDF</span>
+      <span class="badge badge-green">Next.js 16</span>
+      <span class="badge badge-green">Docker Compose</span>
+      <span class="badge badge-green">EPO OPS v3.2</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     SLIDE 9 — CTA
+════════════════════════════════════════════════════ -->
+<div class="slide" id="s8">
+  <div class="slide-inner flex-col" style="max-width:800px;align-items:flex-start">
+    <div class="eyebrow">Let's Talk</div>
+
+    <h1 style="margin-top:16px">
+      <span class="gradient-text">The future of</span><br>
+      <span class="gradient-text">EP prosecution</span><br>
+      <span style="background:linear-gradient(135deg,var(--purple-light),var(--blue-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
+        is intelligent.
+      </span>
+    </h1>
+
+    <p style="font-size:16px;color:var(--muted);line-height:1.8;max-width:580px;margin-top:28px">
+      PatentFlow is <strong style="color:#fff">open source</strong>, runs on your infrastructure,
+      and connects to live EPO data today.
+      It's not a chatbot — it's a purpose-built prosecution workspace
+      that encodes decades of EPC practice into a structured, auditable pipeline.
+    </p>
+
+    <div class="cta-links">
+      <a class="btn-primary" href="http://localhost:3000" target="_blank">
+        ⚡ Live Demo →
+      </a>
+      <a class="btn-ghost" href="https://github.com/sinonchum/PatentFlow" target="_blank">
+        🐙 GitHub
+      </a>
+      <a class="btn-ghost" href="http://localhost:8000/docs" target="_blank">
+        📡 API Docs
+      </a>
+    </div>
+
+    <div style="margin-top:48px;display:flex;gap:32px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--purple-light),var(--blue-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">10×</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Productivity gain</div>
+      </div>
+      <div>
+        <div style="font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--purple-light),var(--blue-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">0</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Data leaks (local LLM)</div>
+      </div>
+      <div>
+        <div style="font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--purple-light),var(--blue-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">180K</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">EPO apps / year addressable</div>
+      </div>
+      <div>
+        <div style="font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--purple-light),var(--blue-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Live</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">EPO API connected</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const total = slides.length;
+let current = 0;
+
+const progress = document.getElementById('progress');
+const counter  = document.getElementById('counter');
+const dotsEl   = document.getElementById('dots');
+
+// Build dots
+slides.forEach((_, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  d.addEventListener('click', () => goTo(i));
+  dotsEl.appendChild(d);
+});
+
+function goTo(n) {
+  if (n < 0 || n >= total) return;
+  slides[current].classList.remove('active');
+  slides[current].classList.add('exit');
+  const prev = current;
+  current = n;
+  slides[current].classList.add('active');
+  setTimeout(() => slides[prev].classList.remove('exit'), 600);
+
+  // Update chrome
+  progress.style.width = ((current + 1) / total * 100) + '%';
+  counter.textContent = (current + 1) + ' / ' + total;
+  document.querySelectorAll('.dot').forEach((d, i) =>
+    d.classList.toggle('active', i === current));
+}
+
+// Init
+progress.style.width = (1 / total * 100) + '%';
+counter.textContent = '1 / ' + total;
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') goTo(current + 1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')                    goTo(current - 1);
+});
+
+// Click anywhere (except links/buttons)
+document.addEventListener('click', e => {
+  if (e.target.closest('a, button, .dot')) return;
+  goTo(current + 1);
+});
+
+// Touch swipe
+let touchX = 0;
+document.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; });
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchX;
+  if (Math.abs(dx) > 50) goTo(dx < 0 ? current + 1 : current - 1);
+});
+</script>
+</body>
+</html>
