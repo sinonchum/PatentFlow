@@ -149,15 +149,33 @@ def parse_docs(
     prior_art_text = ""
     if specification_text and len(specification_text.strip()) > 20:
         spec = specification_text.strip()
-        # Find "1. A/An/The method/system..." pattern in the CLAIMS section
-        claim1_m = re.search(
-            r'(?:^|\n)\s*1\.\s+((?:A|An|The)\s+.+?)(?=\n\s*2\.\s+|\Z)',
-            spec, re.IGNORECASE | re.DOTALL
-        )
-        if claim1_m:
-            claim_text = claim1_m.group(1).strip()
-        else:
-            claim_text = spec  # Fallback: pass full spec, generator will do its best
+
+        # Strategy 1: find the CLAIMS section header, then extract "1. A/An/The …"
+        # Anchoring to the CLAIMS section avoids false stops on "2." in the description.
+        claim_text = ""
+        claims_block = re.search(r'(?:^|\n)[ \t]*CLAIMS?[ \t]*\n', spec, re.IGNORECASE)
+        if claims_block:
+            after = spec[claims_block.end():]
+            after = re.sub(r'^[=\-]{3,}[ \t]*\n', '', after.lstrip('\n'), count=1)
+            m = re.search(
+                r'(?:^|\n)[ \t]*1\.[ \t]+((?:A|An|The)\b.+?)(?=\n[ \t]*2\.[ \t]|\Z)',
+                after, re.IGNORECASE | re.DOTALL
+            )
+            if m:
+                claim_text = m.group(1).strip()
+
+        # Strategy 2: anywhere in the spec, stopping at blank-line + "2."
+        if not claim_text:
+            m = re.search(
+                r'(?:^|\n)[ \t]*1\.[ \t]+((?:A|An|The)\b.+?)(?=\n{1,3}[ \t]*2\.[ \t]|\Z)',
+                spec, re.IGNORECASE | re.DOTALL
+            )
+            if m:
+                claim_text = m.group(1).strip()
+
+        # Last resort: pass the full spec — _tokenize_claim will extract claim 1 itself
+        if not claim_text:
+            claim_text = spec
         # Extract abstract or first paragraph as prior_art_text
         abstract_m = re.search(r'ABSTRACT[\s\n]+(.*?)(?=={5,}|\Z)', spec, re.IGNORECASE | re.DOTALL)
         if abstract_m:

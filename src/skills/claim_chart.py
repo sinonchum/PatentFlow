@@ -40,6 +40,49 @@ class ClaimChartGenerator(PatentAgentSkill[ClaimChartResult]):
     # Step 1 — Claim Tokenizer                                            #
     # ------------------------------------------------------------------ #
 
+    @staticmethod
+    def _extract_claim1_from_spec(raw: str) -> str:
+        """
+        Pull Claim 1 text out of a full patent specification.
+
+        Handles documents that include the publication header, abstract,
+        description, and claims section.  Returns the claim body starting
+        from "A/An/The …" (the "1." prefix is stripped).
+
+        Strategy (in order):
+          1. Locate the CLAIMS section header (e.g. "CLAIMS\n====")
+             and then find "1. A/An/The …" within it.
+          2. Fallback: find "1. A/An/The …" anywhere and stop at
+             the next stand-alone claim number "2." (but only if it
+             appears after a blank line or sentence boundary, to avoid
+             stopping at "2." in the middle of a description sentence).
+        """
+        # Strategy 1 — claims section anchor
+        claims_block = re.search(
+            r'(?:^|\n)[ \t]*CLAIMS?[ \t]*\n',
+            raw, re.IGNORECASE
+        )
+        if claims_block:
+            after_claims = raw[claims_block.end():]
+            # Skip ========= separator line if present
+            after_claims = re.sub(r'^[=\-]{3,}[ \t]*\n', '', after_claims.lstrip('\n'), count=1)
+            m = re.search(
+                r'(?:^|\n)[ \t]*1\.[ \t]+((?:A|An|The)\b.+?)(?=\n[ \t]*2\.[ \t]|\Z)',
+                after_claims, re.IGNORECASE | re.DOTALL
+            )
+            if m:
+                return m.group(1).strip()
+
+        # Strategy 2 — anywhere in document, stop at blank-line + "2."
+        m = re.search(
+            r'(?:^|\n)[ \t]*1\.[ \t]+((?:A|An|The)\b.+?)(?=\n{1,3}[ \t]*2\.[ \t]|\Z)',
+            raw, re.IGNORECASE | re.DOTALL
+        )
+        if m:
+            return m.group(1).strip()
+
+        return ""
+
     def _tokenize_claim(self, claim_text: str) -> List[Dict[str, str]]:
         """
         Gerundive-verb-based claim feature splitter.
@@ -48,8 +91,27 @@ class ClaimChartGenerator(PatentAgentSkill[ClaimChartResult]):
         Nested comprising sub-items ("a first phase...; a second phase...")
         are NOT gerundives so they stay bundled with their parent feature.
         Apparatus claims fall back to semicolon splitting.
+
+        If the full patent specification is supplied instead of just Claim 1,
+        _extract_claim1_from_spec() is called first to isolate the claim text.
         """
-        text = re.sub(r"\s+", " ", (claim_text or "").strip())
+        raw = (claim_text or "").strip()
+        if not raw:
+            return []
+
+        # Detect if the input is a full specification (not just the claim).
+        # Heuristics: starts with a publication header or contains a CLAIMS section.
+        is_full_spec = bool(
+            re.match(r'(?:EUROPEAN PATENT|EP\s+\d|WO\s+\d|US\s+\d|Application\s+Number)', raw, re.IGNORECASE)
+            or re.search(r'(?:^|\n)[ \t]*CLAIMS?[ \t]*\n', raw, re.IGNORECASE)
+            or re.search(r'(?:^|\n)[ \t]*ABSTRACT[ \t]*\n', raw, re.IGNORECASE)
+        )
+        if is_full_spec:
+            extracted = self._extract_claim1_from_spec(raw)
+            if extracted:
+                raw = extracted
+
+        text = re.sub(r"\s+", " ", raw)
         if not text:
             return []
 
