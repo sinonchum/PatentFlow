@@ -7,7 +7,7 @@ import re
 import time
 from typing import Any, Dict, List, Optional
 
-from celery import chain, chord
+from celery import chain
 import redis
 
 from src.celery_app import celery_app
@@ -375,6 +375,58 @@ def translate_align(context: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+@celery_app.task(autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
+def chart_and_verify(context: Dict[str, Any]) -> Dict[str, Any]:
+    """Run claim chart generation and Art. 123(2) terminology audit in one task."""
+    # --- Step 1: claim chart ---
+    workflow_id = str(context.get("workflow_id", ""))
+    chart_meta = _progress_fields(3)
+    chart_meta.update({"examiner": context.get("examiner_preference"), "claim_type": context.get("claim_type")})
+    _set_workflow_meta(workflow_id, "Generating Claim Chart", chart_meta)
+
+    claim_chart_result = generate_claim_chart(
+        str(context.get("claim_text", "")),
+        str(context.get("prior_art_text", "")),
+        office_action_text=str(context.get("office_action_text", "")),
+    )
+
+    # --- Step 2: terminology audit ---
+    _set_workflow_meta(workflow_id, "Running Art. 123(2) Verification", _progress_fields(3))
+
+    cn_text = str(context.get("cn_text", ""))
+    is_english = not any("一" <= ch <= "鿿" for ch in cn_text)
+
+    if is_english:
+        translation_rows = _epo_terminology_audit(cn_text)
+        header = "| Claim Segment | EPO Compliant Form | Risk Assessment |\n|---|---|---|"
+        md_lines = [header]
+        for row in translation_rows:
+            def _esc(s: str) -> str:
+                return (s or "").replace("|", "\\|").replace("\n", " ")
+            md_lines.append(
+                f"| {_esc(row['original_cn'])} | {_esc(row['target_en'])} | {_esc(row['back_cn'])} |"
+            )
+        translation_table_md = "\n".join(md_lines)
+    else:
+        translator = PatentTranslator()
+        translation_rows = translator.translate_and_align_rows(cn_text)
+        translation_table_md = translator.rows_to_markdown(translation_rows)
+
+    return {
+        "workflow_id": workflow_id,
+        "examiner_preference": context.get("examiner_preference", ""),
+        "claim_type": context.get("claim_type", "Method"),
+        "claim_chart": claim_chart_result.get("claim_chart", []),
+        "cited_docs": claim_chart_result.get("cited_docs", []),
+        "office_action_text": str(context.get("office_action_text", "")),
+        "translation_table_markdown": translation_table_md,
+        "translation_rows": translation_rows,
+        "is_english_audit": is_english,
+        "embedding_ref": context.get("embedding_ref"),
+        "embedding_cache_hit": bool(context.get("embedding_cache_hit", False)),
+    }
+
+
 def _build_response_draft(
     claim_chart: List[Dict[str, Any]],
     office_action_text: str,
@@ -549,37 +601,21 @@ def _build_response_draft(
 
 
 @celery_app.task(autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
-def draft_response(parallel_outputs: List[Dict[str, Any]]) -> Dict[str, Any]:
-    workflow_id = ""
-    claim_chart: List[Dict[str, Any]] = []
-    translation_table_md = ""
-    translation_rows: List[Dict[str, Any]] = []
-    examiner_preference = ""
-    claim_type = "Method"
-    embedding_ref = None
-    embedding_cache_hit = False
-    cited_docs: List[str] = []
+def draft_response(combined: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(combined, dict):
+        combined = {}
 
-    office_action_text = ""
-    for out in parallel_outputs:
-        if not isinstance(out, dict):
-            continue
-        workflow_id = workflow_id or str(out.get("workflow_id", ""))
-        examiner_preference = examiner_preference or str(out.get("examiner_preference", ""))
-        claim_type = str(out.get("claim_type", claim_type))
-        if "claim_chart" in out:
-            claim_chart = out.get("claim_chart", []) or []
-            maybe_docs = out.get("cited_docs")
-            if isinstance(maybe_docs, list):
-                cited_docs = [str(d) for d in maybe_docs if isinstance(d, str)]
-            office_action_text = office_action_text or str(out.get("office_action_text", ""))
-            embedding_ref = out.get("embedding_ref")
-            embedding_cache_hit = bool(out.get("embedding_cache_hit", False))
-        if "translation_table_markdown" in out:
-            translation_table_md = str(out.get("translation_table_markdown", ""))
-            maybe_rows = out.get("translation_rows")
-            if isinstance(maybe_rows, list):
-                translation_rows = [r for r in maybe_rows if isinstance(r, dict)]
+    workflow_id = str(combined.get("workflow_id", ""))
+    claim_chart = combined.get("claim_chart", []) or []
+    translation_table_md = str(combined.get("translation_table_markdown", ""))
+    translation_rows = combined.get("translation_rows", []) or []
+    examiner_preference = str(combined.get("examiner_preference", ""))
+    claim_type = str(combined.get("claim_type", "Method"))
+    embedding_ref = combined.get("embedding_ref")
+    embedding_cache_hit = bool(combined.get("embedding_cache_hit", False))
+    cited_docs_raw = combined.get("cited_docs", [])
+    cited_docs = [str(d) for d in cited_docs_raw if isinstance(d, str)] if isinstance(cited_docs_raw, list) else []
+    office_action_text = str(combined.get("office_action_text", ""))
 
     _set_workflow_meta(workflow_id, "Drafting EPO Response", _progress_fields(4))
     time.sleep(0.1)
@@ -638,6 +674,7 @@ def run_patentflow_generate(
             workflow_id=workflow_id,
         ),
         chunk_and_embed.s(),
-        chord((chart_features.s(), translate_align.s()), draft_response.s()),
+        chart_and_verify.s(),
+        draft_response.s(),
     )
     return self.replace(workflow)
