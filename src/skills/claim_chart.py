@@ -182,6 +182,18 @@ class ClaimChartGenerator(PatentAgentSkill[ClaimChartResult]):
         docs = set(re.findall(r'\bD([1-9][0-9]*)\b', office_action_text))
         return [f"D{n}" for n in sorted(docs, key=int)]
 
+    def _extract_snippets_for_doc(self, oa_text: str, doc_id: str) -> List[str]:
+        """Return sentences from the OA that explicitly reference doc_id."""
+        if not oa_text or not doc_id:
+            return []
+        pattern = re.compile(r'\b' + re.escape(doc_id) + r'\b', re.IGNORECASE)
+        snippets: List[str] = []
+        for sent in re.split(r'(?<=[.!?])\s+', oa_text.strip()):
+            sent = sent.strip()
+            if sent and pattern.search(sent):
+                snippets.append(sent)
+        return snippets
+
     # ------------------------------------------------------------------ #
     # Step 3 — Feature Anchoring                                          #
     # ------------------------------------------------------------------ #
