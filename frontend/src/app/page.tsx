@@ -19,6 +19,10 @@ type ClaimChartRow = {
   evidence_source?: string;
   status?: string;
   d1_mapping?: string;
+  // v2 fields from updated claim_chart.py
+  limitation?: string;
+  d1_disclosure?: string;
+  remarks?: string;
 };
 
 type TaskResult = {
@@ -90,18 +94,17 @@ function renderInlineMd(text: string) {
 }
 
 function claimStatusBadge(statusText: string | undefined) {
-  const s = (statusText || "").toLowerCase();
-  if (!s) return { label: "", className: "bg-white/[0.06] text-white/50 border-white/[0.08]" };
-  if (s.includes("✅") || s.includes("yes") || s.includes("disclose")) {
-    return { label: "Disclosed", className: "bg-white/[0.06] text-white/60 border-white/[0.08]" };
-  }
-  if (s.includes("⚠") || s.includes("partial")) {
-    return { label: "Partial", className: "bg-amber-500/10 text-amber-200 border-amber-500/20" };
-  }
-  if (s.includes("❌") || s.includes("difference") || s.includes("distinguish")) {
-    return { label: "Distinguishing", className: "bg-amber-500/10 text-amber-200 border-amber-500/20" };
-  }
-  return { label: statusText || "", className: "bg-white/[0.06] text-white/50 border-white/[0.08]" };
+  const s = (statusText || "").toLowerCase().trim();
+  if (!s) return { label: "—", className: "bg-white/[0.04] text-white/30 border-white/[0.06]" };
+  // Strict exact-value matching first (assessment is always "Yes"/"No"/"Partial")
+  if (s === "no")      return { label: "Distinguishing ✓", className: "bg-emerald-500/10 text-emerald-300 border-emerald-500/25" };
+  if (s === "partial") return { label: "Partial ⚠", className: "bg-amber-500/10 text-amber-200 border-amber-500/20" };
+  if (s === "yes")     return { label: "Disclosed", className: "bg-white/[0.06] text-white/50 border-white/[0.08]" };
+  // Fallback for unexpected longer strings
+  if (s.startsWith("no") || s.includes("not disclosed")) return { label: "Distinguishing ✓", className: "bg-emerald-500/10 text-emerald-300 border-emerald-500/25" };
+  if (s.includes("partial"))  return { label: "Partial ⚠", className: "bg-amber-500/10 text-amber-200 border-amber-500/20" };
+  if (s.startsWith("yes") || s.includes("fully disclosed")) return { label: "Disclosed", className: "bg-white/[0.06] text-white/50 border-white/[0.08]" };
+  return { label: statusText || "—", className: "bg-white/[0.04] text-white/30 border-white/[0.06]" };
 }
 
 function parseMarkdownPipeTable3(md: string): TranslationRow[] {
@@ -679,39 +682,51 @@ export default function Workspace() {
                 <table className="w-full text-sm text-left">
                   <thead>
                     <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-16">ID</th>
-                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest">CLAIM LIMITATION</th>
-                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest">PRIOR ART (D1)</th>
-                      <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-36">STATUS</th>
+                      <th className="px-5 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-14">ID</th>
+                      <th className="px-5 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest">CLAIM LIMITATION</th>
+                      <th className="px-5 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest">PRIOR ART DISCLOSURE</th>
+                      <th className="px-5 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-36">ASSESSMENT</th>
+                      <th className="px-5 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest">LLM REASONING</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(result?.claim_chart || []).length > 0 ? (
-                      (result?.claim_chart || []).map((row, idx) => (
-                        <tr key={`${row.feature_id || idx}`} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                          <td className="px-6 py-5 align-top font-mono text-sm text-purple-400/80">{row.feature_id || String(idx + 1)}</td>
-                          <td className="px-6 py-5 align-top text-white/80 leading-relaxed">{row.claim_limitation || ""}</td>
-                          <td className="px-6 py-5 align-top text-white/50 leading-relaxed">
-                            {row.prior_art_mapping || row.disclosure || row.d1_mapping || ""}
-                          </td>
-                          <td className="px-6 py-5 align-top">
-                            {(() => {
-                              const badge = claimStatusBadge(row.status || row.assessment);
-                              return (
-                                <span
-                                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${badge.className}`}
-                                >
-                                  {badge.label}
-                                </span>
-                              );
-                            })()}
-                          </td>
-                        </tr>
-                      ))
+                      (result?.claim_chart || []).map((row, idx) => {
+                        const limitation = row.claim_limitation || row.limitation || "";
+                        const disclosure = row.prior_art_mapping || row.d1_disclosure || row.disclosure || row.d1_mapping || "";
+                        const assessment = row.status || row.assessment || "";
+                        const reasoning = row.attorney_remarks || row.remarks || "";
+                        const badge = claimStatusBadge(assessment);
+                        return (
+                          <tr key={`${row.feature_id || idx}`} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors group">
+                            <td className="px-5 py-4 align-top font-mono text-sm text-purple-400/80 whitespace-nowrap">
+                              {row.feature_id || String(idx + 1)}
+                            </td>
+                            <td className="px-5 py-4 align-top text-white/80 leading-relaxed max-w-sm">
+                              <span className="text-xs whitespace-pre-wrap break-words">{limitation}</span>
+                            </td>
+                            <td className="px-5 py-4 align-top text-white/50 leading-relaxed max-w-sm">
+                              <span className="text-xs line-clamp-5 break-words">{disclosure}</span>
+                            </td>
+                            <td className="px-5 py-4 align-top whitespace-nowrap">
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${badge.className}`}>
+                                {badge.label}
+                              </span>
+                            </td>
+                            <td className="px-5 py-4 align-top text-white/35 text-xs leading-relaxed max-w-sm">
+                              {reasoning ? (
+                                <span className="italic line-clamp-6 break-words">{reasoning}</span>
+                              ) : (
+                                <span className="text-white/15">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
-                        <td colSpan={4} className="px-6 py-8 text-sm text-white/30">
-                          {isExecuting ? "Generating claim chart..." : "No claim chart yet. Execute pipeline to generate results."}
+                        <td colSpan={5} className="px-6 py-8 text-sm text-white/30">
+                          {isExecuting ? "Generating claim chart…" : "No claim chart yet. Execute pipeline to generate results."}
                         </td>
                       </tr>
                     )}
@@ -724,7 +739,7 @@ export default function Workspace() {
                   <Shield className="w-4 h-4 text-emerald-400/80" />
                   <span className="text-xs text-white/50">
                     <span className="text-emerald-400 font-medium">{(result?.claim_chart || []).length} features</span>
-                    {" "}mapped against {(result?.cited_docs || []).join(", ") || "prior art references"} under Art. 56 EPC
+                    {" "}mapped against {(result?.cited_docs || []).join(", ") || "prior art references"} — Art. 56 EPC · <span className="text-emerald-400/70">{(result?.claim_chart || []).filter(r => (r.status || r.assessment || "").toLowerCase() === "no").length} distinguishing</span>
                   </span>
                 </div>
                 <Button variant="ghost" className="text-xs text-white/30 hover:text-white/60 h-8 px-3 gap-1.5">
@@ -822,9 +837,9 @@ export default function Workspace() {
                     <table className="w-full text-sm text-left">
                       <thead>
                         <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-                          <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-1/3">Original (CN)</th>
-                          <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-1/3">Target (EN)</th>
-                          <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-1/3">Reverse-Translation (CN)</th>
+                          <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-1/3">Claim Segment / Original</th>
+                          <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-1/3">EPO Compliant Form / Target</th>
+                          <th className="px-6 py-4 text-xs font-semibold text-white/30 uppercase tracking-widest w-1/3">Art. 123(2) Risk / Verification</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -835,7 +850,7 @@ export default function Workspace() {
                           >
                             <td className="px-6 py-5 align-top text-white/60 leading-relaxed">{renderInlineMd(r.originalCn)}</td>
                             <td className="px-6 py-5 align-top text-white/80 leading-relaxed">{renderInlineMd(r.targetEn)}</td>
-                            <td className={`px-6 py-5 align-top leading-relaxed ${r.hasRisk ? "text-amber-200" : "text-white/50"}`}>{renderInlineMd(r.backCn)}</td>
+                            <td className={`px-6 py-5 align-top leading-relaxed text-xs ${r.hasRisk ? "text-amber-200" : "text-emerald-400/70"}`}>{renderInlineMd(r.backCn)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -911,70 +926,55 @@ export default function Workspace() {
           {/* Tab 3: Response Draft */}
           <TabsContent value="draft" className="mt-0">
             <div className="rounded-b-xl rounded-tr-xl border border-white/[0.06] border-t-0 bg-white/[0.02] backdrop-blur-sm overflow-hidden">
-              <div className="max-w-3xl mx-auto p-8 md:p-12 space-y-6 text-white/80 leading-relaxed text-sm">
-                <div className="mb-10 border-b border-white/[0.06] pb-6">
-                  <div className="flex justify-between items-start flex-wrap gap-4">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-400/60 mb-2">
-                        Response to European Patent Office
-                      </p>
-                      <h2 className="text-xl font-semibold text-white tracking-tight">
-                        Art. 56 Inventive Step Objection
-                      </h2>
-                    </div>
-                    <div className="text-right text-xs text-white/30 space-y-1">
-                      <p>Date: 28 February 2026</p>
-                      <p>Application No. EP 21 823 456.7</p>
-                    </div>
-                  </div>
-                </div>
-
-                <textarea
-                  value={result?.response_draft || (isExecuting ? "Drafting response..." : "")}
-                  onChange={(e) => setResult((prev) => ({ ...(prev || {}), response_draft: e.target.value }))}
-                  className="w-full min-h-[420px] bg-white/[0.03] border border-white/[0.08] rounded-lg p-4 text-xs text-white/80 leading-relaxed font-mono"
-                />
-
-                <h3 className="font-semibold text-base mt-10 mb-3 text-white/90 flex items-center gap-2">
-                  <span className="w-1 h-6 rounded-full bg-gradient-to-b from-purple-500 to-blue-500 inline-block" />
-                  1. Distinguishing Features Over D1
-                </h3>
-                <p className="text-white/70">
-                  The independent claim contains technical features not disclosed in D1. Specifically,
-                  the claimed method comprises determining a timing offset K0{" "}
-                  <span className="text-white font-medium bg-white/[0.06] px-1.5 py-0.5 rounded">
-                    dynamically based on the received DCI format parameters
-                  </span>.
-                </p>
-                <p className="text-white/70">
-                  In contrast, D1 (US 2021/0123456 A1) utilizes a fixed timing offset configured exclusively
-                  via higher-layer RRC signaling, as detailed in paragraph [0052].
-                </p>
-
-                <h3 className="font-semibold text-base mt-10 mb-3 text-white/90 flex items-center gap-2">
-                  <span className="w-1 h-6 rounded-full bg-gradient-to-b from-blue-500 to-indigo-500 inline-block" />
-                  2. Technical Effects and Advantages
-                </h3>
-                <p className="text-white/70">
-                  The objective technical problem may be formulated as how to increase scheduling flexibility
-                  and reduce latency in HARQ-ACK feedback processing within dynamic 5G NR deployments.
-                  The claimed dynamic determination provides adaptive scheduling inherently absent in D1.
-                </p>
-
-                <div className="mt-12 pt-6 border-t border-white/[0.06]">
-                  <p className="text-white/40 italic">
-                    The Applicant respectfully requests that the objection be withdrawn and the application proceed to grant.
+              {/* Header bar */}
+              <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-400/60 mb-0.5">
+                    Response to European Patent Office
+                  </p>
+                  <p className="text-sm font-medium text-white/70">
+                    {result?.response_draft
+                      ? "Generated from your uploaded case — edit inline below"
+                      : isExecuting
+                      ? "Drafting response from claim chart..."
+                      : "Execute the pipeline to generate a case-specific response draft"}
                   </p>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" className="text-xs text-white/30 hover:text-white/60 h-8 px-3 gap-1.5">
+                    <Download className="w-3.5 h-3.5" />
+                    Export TXT
+                  </Button>
+                </div>
               </div>
-              <div className="border-t border-white/[0.06] bg-white/[0.02] px-6 py-4 flex items-center justify-end gap-3">
+
+              {/* Editable draft body */}
+              <div className="p-6">
+                <textarea
+                  value={result?.response_draft || (isExecuting ? "Generating response draft..." : "")}
+                  onChange={(e) => setResult((prev) => ({ ...(prev || {}), response_draft: e.target.value }))}
+                  placeholder={
+                    "Execute the pipeline to generate a structured EPO response draft based on your uploaded Office Action and Patent Specification.\n\n" +
+                    "The draft will include:\n" +
+                    "  • Application number, examiner name, and OA date extracted from your Office Action\n" +
+                    "  • Distinguishing features from the claim chart (Art. 56)\n" +
+                    "  • Clarity objection stubs (Art. 84) if raised\n" +
+                    "  • Request section\n\n" +
+                    "You can edit the generated draft directly in this text area."
+                  }
+                  className="w-full min-h-[600px] bg-white/[0.03] border border-white/[0.08] rounded-lg p-5 text-xs text-white/80 leading-relaxed font-mono resize-y focus:outline-none focus:border-white/20"
+                />
+              </div>
+
+              <div className="border-t border-white/[0.06] bg-white/[0.02] px-6 py-3 flex items-center justify-between">
+                <span className="text-xs text-white/25">
+                  {result?.response_draft
+                    ? `${result.response_draft.split("\n").length} lines · editable`
+                    : "No draft yet"}
+                </span>
                 <Button variant="ghost" className="text-xs text-white/30 hover:text-white/60 h-8 px-3 gap-1.5">
                   <Download className="w-3.5 h-3.5" />
                   Export TXT
-                </Button>
-                <Button variant="ghost" className="text-xs text-white/30 hover:text-white/60 h-8 px-3 gap-1.5">
-                  <Download className="w-3.5 h-3.5" />
-                  Export DOCX
                 </Button>
               </div>
             </div>

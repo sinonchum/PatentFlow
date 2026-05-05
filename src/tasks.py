@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import time
 from typing import Any, Dict, List, Optional
 
@@ -142,13 +143,27 @@ def parse_docs(
         except Exception:
             pass
 
+    # Extract Claim 1 from the specification for the claim chart generator.
+    # The full spec text would confuse the tokenizer — we need just the claim text.
     claim_text = ""
-    if specification_text and len(specification_text.strip()) > 20:
-        claim_text = specification_text.strip()
-
     prior_art_text = ""
-    if specification_text and len(specification_text) > 50:
-        prior_art_text = (specification_text[:200] + "...").replace("\n", " ")
+    if specification_text and len(specification_text.strip()) > 20:
+        spec = specification_text.strip()
+        # Find "1. A/An/The method/system..." pattern in the CLAIMS section
+        claim1_m = re.search(
+            r'(?:^|\n)\s*1\.\s+((?:A|An|The)\s+.+?)(?=\n\s*2\.\s+|\Z)',
+            spec, re.IGNORECASE | re.DOTALL
+        )
+        if claim1_m:
+            claim_text = claim1_m.group(1).strip()
+        else:
+            claim_text = spec  # Fallback: pass full spec, generator will do its best
+        # Extract abstract or first paragraph as prior_art_text
+        abstract_m = re.search(r'ABSTRACT[\s\n]+(.*?)(?=={5,}|\Z)', spec, re.IGNORECASE | re.DOTALL)
+        if abstract_m:
+            prior_art_text = re.sub(r'\s+', ' ', abstract_m.group(1)).strip()[:400]
+        else:
+            prior_art_text = re.sub(r'\s+', ' ', spec[:300]).strip()
 
     # Load mock office action if none provided (for demo purposes)
     if not office_action_text:
@@ -160,11 +175,24 @@ def parse_docs(
         except Exception:
             pass  # Fallback to empty if file not readable
     
-    cn_text = (
-        office_action_text.strip()
-        if any("\u4e00" <= ch <= "\u9fff" for ch in office_action_text)
-        else "一种无线通信方法，包括：发送下行控制信息DCI格式；确定定时偏移量K0；以及基于该定时偏移量接收物理下行共享信道PDSCH。"
-    )
+    # cn_text drives the Art. 123(2) verifier tab.
+    # Chinese OA -> use OA text directly (CN->EN translation audit).
+    # English OA -> extract Claim 1 from spec for EPO terminology audit.
+    if any("\u4e00" <= ch <= "\u9fff" for ch in office_action_text):
+        cn_text = office_action_text.strip()
+    else:
+        spec = specification_text or ""
+        claim1_m = re.search(
+            r'(?:^|\n)\s*1\.\s+(A\s+(?:method|system|device|apparatus|quality).+?)'
+            r'(?=\n\s*2\.\s+|\Z)',
+            spec, re.IGNORECASE | re.DOTALL
+        )
+        if claim1_m:
+            cn_text = claim1_m.group(1).strip()[:1200]
+        elif spec.strip():
+            cn_text = spec.strip()[:800]
+        else:
+            cn_text = claim_text[:800] if claim_text else ""
 
     return {
         "workflow_id": workflow_id,
@@ -226,27 +254,280 @@ def chart_features(context: Dict[str, Any]) -> Dict[str, Any]:
         "claim_type": context.get("claim_type", "Method"),
         "claim_chart": claim_chart_result.get("claim_chart", []),
         "cited_docs": claim_chart_result.get("cited_docs", []),
+        "office_action_text": str(context.get("office_action_text", "")),
         "embedding_ref": context.get("embedding_ref"),
         "embedding_cache_hit": bool(context.get("embedding_cache_hit", False)),
     }
 
 
+def _epo_terminology_audit(claim_text: str) -> List[Dict[str, Any]]:
+    """
+    EPO terminology compliance check for English claim text.
+    Splits claim into feature segments and flags non-standard terminology.
+    Returns rows compatible with the translation_rows format.
+    """
+    # Split on semicolons (feature boundaries in English claims)
+    raw_segs = re.split(r';\s*', claim_text.strip())
+    segments: List[str] = []
+    for seg in raw_segs:
+        seg = re.sub(r'^(?:and|or)\s+', '', seg.strip(), flags=re.IGNORECASE).rstrip('.')
+        if len(seg) > 15:
+            segments.append(seg)
+
+    # EPO standard terminology rules: (non-standard → (standard, risk_level))
+    RULES: List[tuple] = [
+        (r'\bincluding\b', 'comprising', 'CRITICAL — "including" is ambiguous scope'),
+        (r'\bconsisting\s+of\b', 'comprising', 'HIGH — closed list; amend if open-ended intended'),
+        (r'\bsuitable\s+for\b', 'configured to', 'WARNING — "suitable for" is functional, not structural'),
+        (r'\barranged\s+to\b', 'configured to', 'WARNING — EPO prefers "configured to"'),
+        (r'\badapted\s+to\b', 'configured to', 'WARNING — EPO prefers "configured to"'),
+        (r'\bsaid\b', 'the', 'WARNING — EPO style prefers definite article "the"'),
+        (r'\bin\s+which\b', 'wherein', 'WARNING — EPO prefers "wherein" in claim body'),
+        (r'\bif\b(?!\s+the\s+(?:patent|application))', 'when', 'WARNING — conditional "if" may raise Art. 84 clarity issues'),
+        (r'\babout\b', 'approximately', 'WARNING — "about" may be unclear under Art. 84'),
+        (r'\bapproximately\b', 'approximately / substantially', 'INFO — quantify or justify approximation'),
+        (r'\bnot\s+limited\s+to\b', '[rephrase — open-ended language]', 'WARNING — Art. 84: claim scope should be defined, not excluded'),
+    ]
+
+    rows: List[Dict[str, Any]] = []
+    for seg in segments:
+        flags: List[str] = []
+        compliant = seg
+
+        for pattern, standard, risk in RULES:
+            if re.search(pattern, seg, re.IGNORECASE):
+                flags.append(f'"{re.search(pattern, seg, re.IGNORECASE).group(0)}" → "{standard}"  [{risk}]')  # type: ignore[union-attr]
+
+        risk_text = " | ".join(flags) if flags else "Terminology compliant ✓"
+        has_risk = bool(flags)
+
+        # Highlight risky terms in compliant form
+        for pattern, standard, _ in RULES:
+            compliant = re.sub(
+                pattern,
+                lambda m, s=standard: f"**{s}**",
+                compliant, flags=re.IGNORECASE
+            )
+
+        rows.append({
+            "original_cn": seg,
+            "target_en": compliant,
+            "back_cn": risk_text,
+            "has_risk": has_risk,
+        })
+
+    return rows
+
+
 @celery_app.task(autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
 def translate_align(context: Dict[str, Any]) -> Dict[str, Any]:
     workflow_id = str(context.get("workflow_id", ""))
-    _set_workflow_meta(workflow_id, "Running Translation Dual-Verification", _progress_fields(3))
+    _set_workflow_meta(workflow_id, "Running Art. 123(2) Verification", _progress_fields(3))
     time.sleep(0.1)
 
-    translator = PatentTranslator()
-    translation_rows = translator.translate_and_align_rows(str(context.get("cn_text", "")))
-    translation_table_md = translator.rows_to_markdown(translation_rows)
+    cn_text = str(context.get("cn_text", ""))
+    is_english = not any("一" <= ch <= "鿿" for ch in cn_text)
+
+    if is_english:
+        # English claim text → EPO terminology compliance audit
+        translation_rows = _epo_terminology_audit(cn_text)
+        # Build markdown table (reuse existing column structure)
+        header = "| Claim Segment | EPO Compliant Form | Risk Assessment |\n|---|---|---|"
+        md_lines = [header]
+        for row in translation_rows:
+            def _esc(s: str) -> str:
+                return (s or "").replace("|", "\\|").replace("\n", " ")
+            md_lines.append(
+                f"| {_esc(row['original_cn'])} | {_esc(row['target_en'])} | {_esc(row['back_cn'])} |"
+            )
+        translation_table_md = "\n".join(md_lines)
+    else:
+        # Chinese OA → standard CN→EN translation verification
+        translator = PatentTranslator()
+        translation_rows = translator.translate_and_align_rows(cn_text)
+        translation_table_md = translator.rows_to_markdown(translation_rows)
+
     return {
         "workflow_id": workflow_id,
         "examiner_preference": context.get("examiner_preference", ""),
         "claim_type": context.get("claim_type", "Method"),
         "translation_table_markdown": translation_table_md,
         "translation_rows": translation_rows,
+        "is_english_audit": is_english,
     }
+
+
+def _build_response_draft(
+    claim_chart: List[Dict[str, Any]],
+    office_action_text: str,
+    examiner_preference: str,
+    cited_docs: List[str],
+    claim_type: str = "Method",
+) -> str:
+    oa = office_action_text or ""
+
+    # Extract application metadata from OA header
+    app_m = re.search(r'Application\s+(?:Number|No\.?):?\s*(EP[\s\d\.]+)', oa, re.IGNORECASE)
+    app_no = app_m.group(1).strip() if app_m else "[Application Number]"
+
+    date_m = re.search(r'Date\s+of\s+Communication:?\s*(.+)', oa, re.IGNORECASE)
+    oa_date = date_m.group(1).strip() if date_m else "[Date]"
+
+    exam_m = re.search(r'^Examiner:?\s+([A-Z][^\n]{2,40})', oa, re.IGNORECASE | re.MULTILINE)
+    examiner_str = (
+        exam_m.group(1).strip() if exam_m
+        else (examiner_preference.split(" - ")[0].strip() if examiner_preference else "EXAMINER")
+    )
+
+    primary_doc = cited_docs[0] if cited_docs else "D1"
+    other_docs = cited_docs[1:] if len(cited_docs) > 1 else []
+
+    # Partition chart rows by assessment
+    distinguishing = [
+        r for r in claim_chart
+        if (r.get("assessment") or r.get("status") or "").lower() == "no"
+    ]
+    partial_rows = [
+        r for r in claim_chart
+        if (r.get("assessment") or r.get("status") or "").lower() == "partial"
+    ]
+
+    sep = "=" * 72
+
+    lines: List[str] = [
+        "RESPONSE TO EXAMINING DIVISION",
+        "Communication pursuant to Art. 94(3) EPC",
+        "",
+        f"Application No.:    {app_no}",
+        f"Communication dated: {oa_date}",
+        f"Examiner:           {examiner_str}",
+        f"Claim type:         {claim_type}",
+        "",
+        sep,
+        "I.  ART. 56 EPC — INVENTIVE STEP",
+        sep,
+        "",
+        f"A.  Distinguishing Features over {primary_doc}",
+        "",
+    ]
+
+    if distinguishing:
+        other_str = (", ".join(other_docs)) if other_docs else ""
+        lines.append(
+            f"The Applicant respectfully submits that the following claim features are "
+            f"NOT disclosed in {primary_doc}"
+            + (f" or in {other_str}" if other_str else "")
+            + " and constitute patentably distinguishing features:"
+        )
+        lines.append("")
+        for idx, row in enumerate(distinguishing, 1):
+            fid = row.get("feature_id", "")
+            lim = (row.get("claim_limitation") or row.get("limitation") or "").strip()
+            rmk = (row.get("attorney_remarks") or row.get("remarks") or "").strip()
+            lines.append(f"  ({idx})  Feature {fid}:")
+            lines.append(f"       Claim text: {lim}")
+            if rmk and "not addressed" not in rmk.lower():
+                lines.append(f"       Prior art:  {rmk[:220]}")
+            lines.append(
+                f"       Argument:   [Explain why {primary_doc} does not disclose "
+                f"this feature, and why the skilled person would not combine it "
+                f"with other cited documents to arrive at this feature.]"
+            )
+            lines.append("")
+    else:
+        lines.append(
+            f"  [The claim chart does not identify any features as fully absent "
+            f"from {primary_doc}. Review the Partial features below.]"
+        )
+        lines.append("")
+
+    if partial_rows:
+        lines += [
+            f"B.  Features Only Partially Disclosed in {primary_doc}",
+            "",
+            f"The following features are disclosed in {primary_doc} only in part. "
+            "The specific combination and technical effect are not taught:",
+            "",
+        ]
+        for row in partial_rows:
+            fid = row.get("feature_id", "")
+            lim = (row.get("claim_limitation") or row.get("limitation") or "").strip()
+            rmk = (row.get("attorney_remarks") or row.get("remarks") or "").strip()
+            lines.append(f"  Feature {fid}: {lim}")
+            if rmk:
+                lines.append(f"    Analysis: {rmk[:200]}")
+            lines.append("")
+
+    lines += [
+        "C.  Objective Technical Problem",
+        "",
+        "The distinguishing features collectively solve the objective technical problem of:",
+        "  [Define the technical problem — refer to specific paragraphs of the specification",
+        "   that describe the technical effect/advantage of the distinguishing features.]",
+        "",
+        "D.  Non-Obviousness",
+        "",
+        f"The skilled person, starting from {primary_doc} as the closest prior art, would not",
+        "have arrived at the claimed invention for the following reasons:",
+        "",
+        "  (i)   [Address each obviousness argument raised by the examiner individually.]",
+        "  (ii)  [Argue absence of motivation to combine the cited documents.]",
+        "  (iii) [Highlight any unexpected technical effect (with test data if available).]",
+        "",
+    ]
+
+    # Add Art. 84 section only if OA raises clarity objections
+    art84_present = bool(re.search(r'ARTICLE\s*84|ART\.?\s*84', oa, re.IGNORECASE))
+    if art84_present:
+        # Extract individual 84 sub-objections
+        art84_items = re.findall(
+            r'(?:^|\n)\s*\d+\.\d+\s+(Claim\s+\d+[^\n]+)',
+            oa, re.IGNORECASE
+        )
+        lines += [
+            sep,
+            "II. ART. 84 EPC — CLARITY",
+            sep,
+            "",
+        ]
+        if art84_items:
+            for item in art84_items[:5]:
+                lines.append(f"  Re: {item.strip()}")
+                lines.append("    Response: [Confirm the claim language is clear or propose amendment.]")
+                lines.append("")
+        else:
+            lines.append(
+                "  [Address each clarity objection listed in the Office Action. "
+                "For each, either argue clarity or propose an amendment.]"
+            )
+            lines.append("")
+
+    roman = "II" if not art84_present else "III"
+    lines += [
+        sep,
+        f"{roman}. REQUEST",
+        sep,
+        "",
+        "For the reasons submitted above, the Applicant respectfully requests that:",
+        "",
+        "  (i)   The objections under Art. 56 EPC be withdrawn;",
+    ]
+    if art84_present:
+        lines.append("  (ii)  The objections under Art. 84 EPC be withdrawn;")
+        lines.append("  (iii) The application be allowed to proceed to grant.")
+    else:
+        lines.append("  (ii)  The application be allowed to proceed to grant.")
+
+    lines += [
+        "",
+        "Respectfully submitted,",
+        "",
+        "[Attorney / Representative Name]",
+        "[Firm / Reference Number]",
+        "[Date]",
+    ]
+
+    return "\n".join(lines)
 
 
 @celery_app.task(autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
@@ -261,6 +542,7 @@ def draft_response(parallel_outputs: List[Dict[str, Any]]) -> Dict[str, Any]:
     embedding_cache_hit = False
     cited_docs: List[str] = []
 
+    office_action_text = ""
     for out in parallel_outputs:
         if not isinstance(out, dict):
             continue
@@ -272,6 +554,7 @@ def draft_response(parallel_outputs: List[Dict[str, Any]]) -> Dict[str, Any]:
             maybe_docs = out.get("cited_docs")
             if isinstance(maybe_docs, list):
                 cited_docs = [str(d) for d in maybe_docs if isinstance(d, str)]
+            office_action_text = office_action_text or str(out.get("office_action_text", ""))
             embedding_ref = out.get("embedding_ref")
             embedding_cache_hit = bool(out.get("embedding_cache_hit", False))
         if "translation_table_markdown" in out:
@@ -282,12 +565,13 @@ def draft_response(parallel_outputs: List[Dict[str, Any]]) -> Dict[str, Any]:
 
     _set_workflow_meta(workflow_id, "Drafting EPO Response", _progress_fields(4))
     time.sleep(0.1)
-    examiner_name = (examiner_preference.split(" - ")[0] if examiner_preference else "EXAMINER").strip() or "EXAMINER"
-    response_draft = (
-        f"RESPONSE TO EXAMINER {examiner_name.upper()} - OFFICE ACTION DATED [DATE]\n\n"
-        f"Re: European Patent Application No. [Application Number]\n"
-        f"Art. 56 Inventive Step Objection - {claim_type} Claim\n\n"
-        "The Applicant respectfully submits the following observations.\n"
+
+    response_draft = _build_response_draft(
+        claim_chart=claim_chart,
+        office_action_text=office_action_text,
+        examiner_preference=examiner_preference,
+        cited_docs=cited_docs,
+        claim_type=claim_type,
     )
 
     out: Dict[str, Any] = {
