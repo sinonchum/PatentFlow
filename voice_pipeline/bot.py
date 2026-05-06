@@ -6,13 +6,18 @@ Pipecat 流水線主入口。
 流水線架構（左 → 右）：
 
   DailyTransport.input()
-    → SileroVADAnalyzer       # 人聲偵測
-    → WhisperSTTService       # 語音 → 文字 (本地 Faster Whisper base 中文)
-    → LLMUserContextAggregator # 累積對話上下文
-    → OpenAILLMService         # Kimi / Moonshot LLM（OpenAI 兼容模式）
-    → MinimaxTTSService        # 文字 → 語音 (MiniMax T2A V2)
+    → SileroVADAnalyzer         # 人聲偵測
+    → WhisperSTTService         # 語音 → 文字 (本地 Faster Whisper base 中文)
+    → LLMUserContextAggregator  # 累積對話上下文
+    → OpenAILLMService          # Kimi / Moonshot LLM（OpenAI 兼容模式）
+    → ElevenLabsTTSService      # 文字 → 語音（預設）
+      或 MinimaxTTSService      # 文字 → 語音（TTS_PROVIDER=minimax）
     → DailyTransport.output()
     → LLMAssistantContextAggregator # 記錄 AI 回應
+
+TTS 提供商設定（.env）：
+  TTS_PROVIDER=elevenlabs   → ElevenLabs（預設，需設定 ELEVENLABS_API_KEY / VOICE_ID）
+  TTS_PROVIDER=minimax      → MiniMax T2A V2（需設定 MINIMAX_API_KEY / GROUP_ID）
 
 啟動方式（請在 PatentFlow 倉庫根目錄執行）：
   cd <PatentFlow>
@@ -36,21 +41,68 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.frames.frames import LLMMessagesFrame
+from pipecat.frames.frames import AudioRawFrame, Frame, LLMMessagesFrame, TTSStartedFrame, TTSStoppedFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
+from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.daily.transport import DailyParams, DailyTransport
 
 from voice_pipeline.config import VoiceConfig
+from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
 from pipecat.services.whisper.stt import WhisperSTTService
 from pipecat.transcriptions.language import Language
 from voice_pipeline.services.minimax_tts import MinimaxTTSService
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(_REPO_ROOT / ".env")
+
+
+# ------------------------------------------------------------------
+# 音訊診斷處理器：計算 TTS 實際送出的音訊幀數量
+# 確認後可移除（或設 AUDIO_DIAG=false 在 .env 關閉）
+# ------------------------------------------------------------------
+class AudioDiagnostics(FrameProcessor):
+    """插在 tts → transport.output() 之間，確認音訊幀確實存在。"""
+
+    def __init__(self):
+        super().__init__()
+        self._audio_frames = 0
+        self._total_bytes = 0
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection):
+        await super().process_frame(frame, direction)
+
+        if isinstance(frame, TTSStartedFrame):
+            self._audio_frames = 0
+            self._total_bytes = 0
+            logger.info("[AudioDiag] TTS 開始 → 等待音訊幀…")
+
+        elif isinstance(frame, AudioRawFrame):
+            self._audio_frames += 1
+            self._total_bytes += len(frame.audio)
+            if self._audio_frames == 1:
+                logger.info(
+                    f"[AudioDiag] ✅ 第一個音訊幀！"
+                    f" rate={frame.sample_rate} Hz, channels={frame.num_channels},"
+                    f" size={len(frame.audio)} bytes"
+                )
+            elif self._audio_frames % 20 == 0:
+                logger.info(
+                    f"[AudioDiag] 音訊幀累計 {self._audio_frames}，共 {self._total_bytes} bytes"
+                )
+
+        elif isinstance(frame, TTSStoppedFrame):
+            if self._audio_frames == 0:
+                logger.warning("[AudioDiag] ⚠️  TTS 結束但沒有產生任何音訊幀！（可能靜默失敗）")
+            else:
+                logger.info(
+                    f"[AudioDiag] TTS 結束，共送出 {self._audio_frames} 幀 / {self._total_bytes} bytes"
+                )
+
+        await self.push_frame(frame, direction)
 
 # ------------------------------------------------------------------
 # 設定 loguru 輸出格式
@@ -124,13 +176,31 @@ async def run_bot(room_url: str, token: str = "") -> None:
         model=cfg.moonshot_model,
     )
 
-    # ---- TTS ----
-    tts = MinimaxTTSService(
-        api_key=cfg.minimax_api_key,
-        group_id=cfg.minimax_group_id,
-        voice_id=cfg.tts_voice_id,
-        sample_rate=cfg.tts_sample_rate,
-    )
+    # ---- TTS（根據 TTS_PROVIDER 切換）----
+    if cfg.tts_provider == "elevenlabs":
+        logger.info(
+            f"TTS: ElevenLabs — model={cfg.elevenlabs_model}, voice={cfg.elevenlabs_voice_id}"
+        )
+        tts = ElevenLabsTTSService(
+            api_key=cfg.elevenlabs_api_key,
+            settings=ElevenLabsTTSService.Settings(
+                model=cfg.elevenlabs_model,
+                voice=cfg.elevenlabs_voice_id,
+            ),
+        )
+    elif cfg.tts_provider == "minimax":
+        logger.info(
+            f"TTS: MiniMax — model=speech-01-turbo, voice={cfg.minimax_voice_id}"
+        )
+        tts = MinimaxTTSService(
+            api_key=cfg.minimax_api_key,
+            group_id=cfg.minimax_group_id,
+            voice_id=cfg.minimax_voice_id,
+            sample_rate=cfg.minimax_tts_sample_rate,
+        )
+    else:
+        logger.error(f"不支援的 TTS_PROVIDER={cfg.tts_provider!r}")
+        sys.exit(1)
 
     # ---- 對話上下文 ----
     initial_messages = [
@@ -143,6 +213,7 @@ async def run_bot(room_url: str, token: str = "") -> None:
     context_aggregator = llm.create_context_aggregator(context)
 
     # ---- 組裝 Pipeline ----
+    audio_diag = AudioDiagnostics()
     pipeline = Pipeline(
         [
             transport.input(),
@@ -150,6 +221,7 @@ async def run_bot(room_url: str, token: str = "") -> None:
             context_aggregator.user(),
             llm,
             tts,
+            audio_diag,          # ← 診斷：確認音訊幀是否存在
             transport.output(),
             context_aggregator.assistant(),
         ]

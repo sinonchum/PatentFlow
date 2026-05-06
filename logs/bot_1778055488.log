@@ -1,0 +1,150 @@
+2026-05-06 10:18:08.719 | INFO     | pipecat:<module>:14 - ᓚᘏᗢ Pipecat 0.0.108 (Python 3.10.12 (main, Mar  3 2026, 11:56:32) [GCC 11.4.0]) ᓚᘏᗢ
+[0;93m2026-05-06 10:18:13.081737768 [W:onnxruntime:Default, device_discovery.cc:164 DiscoverDevicesForPlatform] GPU device discovery failed: device_discovery.cc:89 ReadFileContents Failed to open file: "/sys/class/drm/card0/device/vendor"[m
+[32m10:18:25[0m | [1mINFO    [0m | [36m__main__[0m:[36m143[0m - 連接 Daily 房間: https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1
+/mnt/c/Users/User/Downloads/PatentFlow/voice_pipeline/bot.py:173: DeprecationWarning: The `model` parameter is deprecated. Use `settings=OpenAILLMService.Settings(model=...)` instead. If both are provided, `settings` takes precedence.
+  llm = OpenAILLMService(
+[32m10:18:27[0m | [1mINFO    [0m | [36m__main__[0m:[36m181[0m - TTS: ElevenLabs — model=eleven_multilingual_v2, voice=21m00Tcm4TlvDq8ikWAM
+/mnt/c/Users/User/Downloads/PatentFlow/voice_pipeline/bot.py:212: DeprecationWarning: OpenAILLMContext is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  context = OpenAILLMContext(initial_messages)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/llm_response.py:326: DeprecationWarning: OpenAIUserContextAggregator (likely created with create_context_aggregator()) is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  super().__init__(**kwargs)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/llm_response.py:326: DeprecationWarning: OpenAIAssistantContextAggregator (likely created with create_context_aggregator()) is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  super().__init__(**kwargs)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/transports/base_input.py:152: DeprecationWarning: Parameter 'vad_analyzer' is deprecated. Use `LLMUserAggregator`'s `vad_analyzer` parameter, or `VADProcessor` if no `LLMUserAggregator` is needed.
+  warnings.warn(
+[32m10:18:27[0m | [1mINFO    [0m | [36m__main__[0m:[36m271[0m - 語音流水線啟動，等待參與者加入…
+[32m10:18:27[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m857[0m - Joining https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1
+[32m10:18:27[0m | [33m[1mWARNING [0m | [36mpipecat.services.stt_service[0m:[36m453[0m - WhisperSTTService#0: ttfs_p99_latency not set, using default 1.0s
+[32m10:18:28[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m878[0m - Joined https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1. Participant ID: 5b8a8653-5425-49ef-a760-e7f6dad337a0, Meeting ID: f6d4467c-e784-490d-91ee-57745a1c921a
+[32m10:18:28[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m2907[0m - Participant joined f820197c-848c-4772-a3ad-f06a59f08562
+[32m10:18:28[0m | [1mINFO    [0m | [36m__main__[0m:[36m265[0m - 通話狀態更新: joining
+[32m10:18:28[0m | [1mINFO    [0m | [36m__main__[0m:[36m245[0m - 第一位參與者加入: f820197c-848c-4772-a3ad-f06a59f08562
+[32m10:18:28[0m | [1mINFO    [0m | [36m__main__[0m:[36m251[0m - bot-ready 已主動送出
+<string>:4: DeprecationWarning: LLMMessagesFrame is deprecated and will be removed in a future version. Instead, use either `LLMMessagesUpdateFrame` with `run_llm=True`, or `OpenAILLMContextFrame` with desired messages in a new context
+[32m10:18:28[0m | [1mINFO    [0m | [36m__main__[0m:[36m265[0m - 通話狀態更新: joined
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/openai_llm_context.py:144: DeprecationWarning: OpenAILLMContext is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  context = OpenAILLMContext()
+[32m10:18:34[0m | [1mINFO    [0m | [36m__main__[0m:[36m87[0m - [AudioDiag] ✅ 第一個音訊幀！ rate=16000 Hz, channels=1, size=640 bytes
+[32m10:18:34[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 20，共 12800 bytes
+[32m10:18:34[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 40，共 25600 bytes
+[32m10:18:34[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 60，共 38400 bytes
+[32m10:18:34[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 80，共 51200 bytes
+[32m10:18:34[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 100，共 64000 bytes
+[32m10:18:34[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 120，共 76800 bytes
+[32m10:18:34[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 140，共 89600 bytes
+[32m10:18:34[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 160，共 102400 bytes
+[32m10:18:34[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 180，共 115200 bytes
+[32m10:18:34[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 200，共 128000 bytes
+[32m10:18:34[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 220，共 140800 bytes
+[32m10:18:34[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 240，共 153600 bytes
+[32m10:18:34[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 260，共 166400 bytes
+[32m10:18:34[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 280，共 179200 bytes
+[32m10:18:34[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 300，共 192000 bytes
+[32m10:18:35[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 320，共 204800 bytes
+[32m10:18:35[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 340，共 217600 bytes
+[32m10:18:35[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 360，共 230400 bytes
+[32m10:18:36[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 380，共 243200 bytes
+[32m10:18:36[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 400，共 256000 bytes
+<string>:4: DeprecationWarning: OpenAILLMContextFrame is deprecated and will be removed in a future version. Use LLMContextFrame with the universal `LLMContext` and `LLMContextAggregatorPair` instead. See OpenAILLMContext docstring for migration guide.
+[32m10:18:38[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 420，共 268800 bytes
+[32m10:18:38[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 440，共 281600 bytes
+[32m10:18:38[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 460，共 294400 bytes
+[32m10:18:38[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 480，共 307200 bytes
+[32m10:18:38[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 500，共 320000 bytes
+[32m10:18:39[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 520，共 332800 bytes
+[32m10:18:39[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 540，共 345600 bytes
+[32m10:18:39[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 560，共 358400 bytes
+[32m10:18:40[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 580，共 371200 bytes
+[32m10:18:40[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 600，共 384000 bytes
+[32m10:18:41[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 620，共 396800 bytes
+[32m10:18:41[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 640，共 409600 bytes
+[32m10:18:41[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 660，共 422400 bytes
+[32m10:18:42[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 680，共 435200 bytes
+[32m10:18:42[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 700，共 448000 bytes
+[32m10:18:43[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 720，共 460800 bytes
+[32m10:18:43[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 740，共 473600 bytes
+[32m10:18:43[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 760，共 486400 bytes
+[32m10:18:44[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 780，共 499200 bytes
+[32m10:18:44[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 800，共 512000 bytes
+[32m10:18:45[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 820，共 524800 bytes
+[32m10:18:45[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 840，共 537600 bytes
+[32m10:18:45[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 860，共 550400 bytes
+[32m10:18:46[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 880，共 563200 bytes
+[32m10:18:46[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 900，共 576000 bytes
+[32m10:18:47[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 920，共 588800 bytes
+[32m10:18:47[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 940，共 601600 bytes
+[32m10:18:47[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 960，共 614400 bytes
+[32m10:18:48[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 980，共 627200 bytes
+[32m10:18:48[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1000，共 640000 bytes
+[32m10:18:49[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1020，共 652800 bytes
+[32m10:18:49[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1040，共 665600 bytes
+[32m10:18:49[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1060，共 678400 bytes
+[32m10:18:50[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1080，共 691200 bytes
+[32m10:18:50[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1100，共 704000 bytes
+[32m10:18:51[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1120，共 716800 bytes
+[32m10:18:51[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1140，共 729600 bytes
+[32m10:18:51[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1160，共 742400 bytes
+[32m10:18:52[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1180，共 755200 bytes
+[32m10:18:52[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1200，共 768000 bytes
+[32m10:18:53[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1220，共 780800 bytes
+[32m10:18:53[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1240，共 793600 bytes
+[32m10:18:53[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1260，共 806400 bytes
+[32m10:18:54[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1280，共 819200 bytes
+[32m10:18:54[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1300，共 832000 bytes
+[32m10:18:55[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1320，共 844800 bytes
+[32m10:18:55[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1340，共 857600 bytes
+[32m10:18:55[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1360，共 870400 bytes
+[32m10:18:56[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1380，共 883200 bytes
+[32m10:18:56[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1400，共 896000 bytes
+[32m10:18:57[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1420，共 908800 bytes
+[32m10:18:57[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1440，共 921600 bytes
+[32m10:18:57[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1460，共 934400 bytes
+[32m10:18:58[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1480，共 947200 bytes
+[32m10:18:58[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1500，共 960000 bytes
+[32m10:18:59[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1520，共 972800 bytes
+[32m10:18:59[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1540，共 985600 bytes
+[32m10:18:59[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1560，共 998400 bytes
+[32m10:19:00[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1580，共 1011200 bytes
+[32m10:19:00[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1600，共 1024000 bytes
+[32m10:19:01[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 1620，共 1036800 bytes
+[32m10:19:01[0m | [1mINFO    [0m | [36m__main__[0m:[36m81[0m - [AudioDiag] TTS 開始 → 等待音訊幀…
+[32m10:19:01[0m | [1mINFO    [0m | [36m__main__[0m:[36m87[0m - [AudioDiag] ✅ 第一個音訊幀！ rate=16000 Hz, channels=1, size=640 bytes
+[32m10:19:01[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 20，共 54048 bytes
+[32m10:19:02[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 40，共 66848 bytes
+[32m10:19:02[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 60，共 149320 bytes
+[32m10:19:02[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 80，共 162120 bytes
+[32m10:19:03[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 100，共 350808 bytes
+[32m10:19:03[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 120，共 363608 bytes
+[32m10:19:03[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 140，共 775200 bytes
+[32m10:19:04[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 160，共 942944 bytes
+[32m10:19:04[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 180，共 955744 bytes
+[32m10:19:05[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 200，共 968544 bytes
+[32m10:19:05[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 220，共 981344 bytes
+[32m10:19:05[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 240，共 994144 bytes
+[32m10:19:06[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 260，共 1006944 bytes
+[32m10:19:06[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 280，共 1019744 bytes
+[32m10:19:07[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 300，共 1032544 bytes
+[32m10:19:07[0m | [1mINFO    [0m | [36m__main__[0m:[36m101[0m - [AudioDiag] TTS 結束，共送出 303 幀 / 1034464 bytes
+[32m10:19:07[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 320，共 1045344 bytes
+[32m10:19:07[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 340，共 1058144 bytes
+[32m10:19:08[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 360，共 1070944 bytes
+[32m10:19:08[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 380，共 1083744 bytes
+[32m10:19:09[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 400，共 1096544 bytes
+[32m10:19:09[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 420，共 1109344 bytes
+[32m10:19:09[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 440，共 1122144 bytes
+[32m10:19:10[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 460，共 1134944 bytes
+[32m10:19:10[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 480，共 1147744 bytes
+[32m10:19:11[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 500，共 1160544 bytes
+[32m10:19:11[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 520，共 1173344 bytes
+[32m10:19:11[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 540，共 1186144 bytes
+[32m10:19:12[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 560，共 1198944 bytes
+[32m10:19:12[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 580，共 1211744 bytes
+[32m10:19:13[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 600，共 1224544 bytes
+[32m10:19:13[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 620，共 1237344 bytes
+[32m10:19:13[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 640，共 1250144 bytes
+[32m10:19:14[0m | [1mINFO    [0m | [36m__main__[0m:[36m93[0m - [AudioDiag] 音訊幀累計 660，共 1262944 bytes
+[32m10:19:14[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m2927[0m - Participant left f820197c-848c-4772-a3ad-f06a59f08562
+[32m10:19:14[0m | [1mINFO    [0m | [36m__main__[0m:[36m260[0m - 參與者離開: f820197c-848c-4772-a3ad-f06a59f08562，原因: leftCall
+[32m10:19:14[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m973[0m - Leaving https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1
+[32m10:19:14[0m | [1mINFO    [0m | [36m__main__[0m:[36m265[0m - 通話狀態更新: leaving
+[32m10:19:14[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m986[0m - Left https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1

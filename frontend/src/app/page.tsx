@@ -198,6 +198,9 @@ export default function Workspace() {
   /** 遠端 AI 語音自動播放節點，斷線時移除 */
   const voiceAudioElemsRef = useRef<HTMLElement[]>([]);
 
+  /** 用戶點擊按鈕時立即解鎖瀏覽器的自動播放政策 */
+  const voiceAudioCtxRef = useRef<AudioContext | null>(null);
+
   const [voiceStatus, setVoiceStatus] = useState<VoiceUiStatus>("idle");
   const [voiceConnected, setVoiceConnected] = useState(false);
   const [voiceHint, setVoiceHint] = useState("Voice assistant offline · Click to start");
@@ -319,6 +322,14 @@ export default function Workspace() {
       /* noop */
     }
 
+    // 關閉並重置 AudioContext，下次重新連線時重建
+    try {
+      await voiceAudioCtxRef.current?.close();
+    } catch {
+      /* noop */
+    }
+    voiceAudioCtxRef.current = null;
+
     voicePipecatRef.current = null;
   }, []);
 
@@ -330,6 +341,18 @@ export default function Workspace() {
 
   const handleVoiceToggle = async () => {
     if (voiceStatus === "connecting") return;
+
+    // 在用戶手勢的同步執行期間建立/恢復 AudioContext，解鎖自動播放政策
+    try {
+      if (!voiceAudioCtxRef.current) {
+        voiceAudioCtxRef.current = new AudioContext();
+      }
+      if (voiceAudioCtxRef.current.state === "suspended") {
+        await voiceAudioCtxRef.current.resume();
+      }
+    } catch {
+      /* 不支援 AudioContext 的環境則忽略 */
+    }
 
     if (voicePipecatRef.current !== null || voiceConnected) {
       try {
@@ -359,35 +382,42 @@ export default function Workspace() {
 
       const attachRemoteAudioTrack = (track: MediaStreamTrack): void => {
         if (track.kind !== "audio") return;
+        console.log("[voice] Attaching remote audio track:", track.id);
+        const stream = new MediaStream([track]);
+
+        // 方案 A：透過 Web Audio API 路由（不受 autoplay policy 限制）
+        const ctx = voiceAudioCtxRef.current;
+        if (ctx && ctx.state === "running") {
+          try {
+            const source = ctx.createMediaStreamSource(stream);
+            source.connect(ctx.destination);
+            console.log("[voice] AudioContext route: OK");
+            // 同時保留 <audio> 作備用，但不依賴它
+          } catch (e) {
+            console.warn("[voice] AudioContext route failed, falling back:", e);
+          }
+        }
+
+        // 方案 B：<audio> 元素（作為 AudioContext 的備用或平行路徑）
         try {
-          let el: HTMLElement | null = null;
-          const t = track as MediaStreamTrack & { attach?: () => HTMLElement };
-          if (typeof t.attach === "function") {
-            el = t.attach();
-          } else {
-            const stream = new MediaStream([t]);
-            const audio = document.createElement("audio");
-            audio.autoplay = true;
-            audio.volume = 1;
-            audio.srcObject = stream;
-            audio.setAttribute("playsinline", "true");
-            el = audio;
-          }
-          if (!el) return;
+          const audio = document.createElement("audio");
+          audio.autoplay = true;
+          audio.volume = 1;
+          audio.srcObject = stream;
+          audio.setAttribute("playsinline", "true");
+          // 定位在視口外但仍在 DOM 中（display:none 在部分瀏覽器會暫停播放）
+          audio.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;";
+          document.body.appendChild(audio);
+          voiceAudioElemsRef.current.push(audio);
 
-          el.setAttribute("playsinline", "true");
-          el.className =
-            "pointer-events-none fixed left-[-9999px] top-[-9999px] h-0 w-0 overflow-hidden opacity-0";
-          document.body.appendChild(el);
-          voiceAudioElemsRef.current.push(el);
-
-          if ("play" in el && typeof (el as HTMLMediaElement).play === "function") {
-            void (el as HTMLMediaElement).play().catch(() => {
-              setVoiceHint("Allow autoplay or click the page first to hear the assistant");
-            });
-          }
+          void audio.play().catch((e) => {
+            console.warn("[voice] play() blocked:", e);
+            if (!ctx || ctx.state !== "running") {
+              setVoiceHint("Click the page first to enable audio, then reconnect");
+            }
+          });
         } catch (e) {
-          console.warn("[voice] attach remote audio", e);
+          console.warn("[voice] attach remote audio error:", e);
         }
       };
 
@@ -399,7 +429,9 @@ export default function Workspace() {
           onUserStartedSpeaking: () => setVoiceHint("Listening…"),
           onUserStoppedSpeaking: () => setVoiceHint("Processing…"),
           onTrackStarted: (track, participant) => {
-            if (!participant || participant.local) return;
+            // 只過濾明確的本地音軌；participant 為 undefined 時（Bot 剛加入）也要接
+            if (participant?.local === true) return;
+            console.log("[voice] onTrackStarted:", track.kind, "local:", participant?.local);
             attachRemoteAudioTrack(track);
           },
         },

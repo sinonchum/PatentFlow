@@ -1,10 +1,14 @@
 """
 配置管理：從 .env 讀取所有必要參數。
+
+TTS_PROVIDER 可選值：
+  elevenlabs  (預設) — 使用 ElevenLabs WebSocket TTS，支援多語言
+  minimax             — 使用 MiniMax T2A V2 TTS（需填 MINIMAX_API_KEY / GROUP_ID）
 """
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -15,29 +19,35 @@ load_dotenv(_REPO_ROOT / ".env")
 
 @dataclass
 class VoiceConfig:
-    # MiniMax (ASR + TTS)
-    minimax_api_key: str
-    minimax_group_id: str
+    # ---- TTS 提供商 ----
+    tts_provider: str = "elevenlabs"   # "elevenlabs" | "minimax"
 
-    # Moonshot / Kimi (LLM)
-    moonshot_api_key: str
+    # ---- ElevenLabs TTS ----
+    elevenlabs_api_key: str = ""
+    elevenlabs_voice_id: str = ""
+    elevenlabs_model: str = "eleven_turbo_v2_5"
+
+    # ---- MiniMax TTS（TTS_PROVIDER=minimax 時使用）----
+    minimax_api_key: str = ""
+    minimax_group_id: str = ""
+    minimax_voice_id: str = "male-qn-qingse"
+    minimax_tts_sample_rate: int = 16000
+
+    # ---- Moonshot / Kimi (LLM) ----
+    moonshot_api_key: str = ""
     moonshot_base_url: str = "https://api.moonshot.cn/v1"
     moonshot_model: str = "moonshot-v1-8k"
 
-    # Daily WebRTC
+    # ---- Daily WebRTC ----
     daily_room_url: str = ""
-    daily_api_key: str = ""   # 用於動態建立房間（可選）
-    daily_token: str = ""     # Bot 進入房間用的 token（可選）
+    daily_api_key: str = ""
+    daily_token: str = ""
 
-    # TTS 音色設定
-    tts_voice_id: str = "male-qn-qingse"
-    tts_sample_rate: int = 16000
-
-    # STT 設定
+    # ---- STT 設定 ----
     stt_language: str = "zh"
     stt_sample_rate: int = 16000
 
-    # 系統提示詞
+    # ---- 系統提示詞 ----
     system_prompt: str = (
         "你是一位專業的專利分析助理，精通中英文專利文件解讀、"
         "獨立請求項分析與 Office Action 回應策略。"
@@ -54,22 +64,51 @@ class VoiceConfig:
                 )
             return val
 
+        def _get(key: str, default: str = "") -> str:
+            return os.getenv(key, default).strip()
+
+        tts_provider = _get("TTS_PROVIDER", "elevenlabs").lower()
+
+        # ---- 按 provider 決定哪些 key 是必填 ----
+        if tts_provider == "elevenlabs":
+            elevenlabs_api_key = _require("ELEVENLABS_API_KEY")
+            elevenlabs_voice_id = _require("ELEVENLABS_VOICE_ID")
+            minimax_api_key = _get("MINIMAX_API_KEY")
+            minimax_group_id = _get("MINIMAX_GROUP_ID")
+        elif tts_provider == "minimax":
+            elevenlabs_api_key = _get("ELEVENLABS_API_KEY")
+            elevenlabs_voice_id = _get("ELEVENLABS_VOICE_ID")
+            minimax_api_key = _require("MINIMAX_API_KEY")
+            minimax_group_id = _require("MINIMAX_GROUP_ID")
+        else:
+            raise EnvironmentError(
+                f"不支援的 TTS_PROVIDER={tts_provider!r}，請設為 'elevenlabs' 或 'minimax'。"
+            )
+
         return cls(
-            minimax_api_key=_require("MINIMAX_API_KEY"),
-            minimax_group_id=_require("MINIMAX_GROUP_ID"),
+            tts_provider=tts_provider,
+            # ElevenLabs
+            elevenlabs_api_key=elevenlabs_api_key,
+            elevenlabs_voice_id=elevenlabs_voice_id,
+            elevenlabs_model=_get("ELEVENLABS_MODEL", "eleven_turbo_v2_5"),
+            # MiniMax
+            minimax_api_key=minimax_api_key,
+            minimax_group_id=minimax_group_id,
+            minimax_voice_id=_get("MINIMAX_VOICE_ID", "male-qn-qingse"),
+            minimax_tts_sample_rate=int(_get("MINIMAX_TTS_SAMPLE_RATE", "16000")),
+            # LLM
             moonshot_api_key=_require("MOONSHOT_API_KEY"),
-            moonshot_base_url=os.getenv(
-                "MOONSHOT_BASE_URL", "https://api.moonshot.cn/v1"
-            ),
-            moonshot_model=os.getenv("MOONSHOT_MODEL", "moonshot-v1-8k"),
-            daily_room_url=os.getenv("DAILY_SAMPLE_ROOM_URL", ""),
-            daily_api_key=os.getenv("DAILY_API_KEY", ""),
-            daily_token=os.getenv("DAILY_TOKEN", ""),
-            tts_voice_id=os.getenv("TTS_VOICE_ID", "male-qn-qingse"),
-            tts_sample_rate=int(os.getenv("TTS_SAMPLE_RATE", "16000")),
-            stt_language=os.getenv("STT_LANGUAGE", "zh"),
-            stt_sample_rate=int(os.getenv("STT_SAMPLE_RATE", "16000")),
-            system_prompt=os.getenv(
+            moonshot_base_url=_get("MOONSHOT_BASE_URL", "https://api.moonshot.cn/v1"),
+            moonshot_model=_get("MOONSHOT_MODEL", "moonshot-v1-8k"),
+            # Daily
+            daily_room_url=_get("DAILY_SAMPLE_ROOM_URL"),
+            daily_api_key=_get("DAILY_API_KEY"),
+            daily_token=_get("DAILY_TOKEN"),
+            # STT
+            stt_language=_get("STT_LANGUAGE", "zh"),
+            stt_sample_rate=int(_get("STT_SAMPLE_RATE", "16000")),
+            # System
+            system_prompt=_get(
                 "SYSTEM_PROMPT",
                 "你是一位專業的專利分析助理，精通中英文專利文件解讀、"
                 "獨立請求項分析與 Office Action 回應策略。"

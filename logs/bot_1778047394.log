@@ -1,0 +1,60 @@
+2026-05-06 08:03:14.373 | INFO     | pipecat:<module>:14 - ᓚᘏᗢ Pipecat 0.0.108 (Python 3.10.12 (main, Mar  3 2026, 11:56:32) [GCC 11.4.0]) ᓚᘏᗢ
+[0;93m2026-05-06 08:03:25.149467409 [W:onnxruntime:Default, device_discovery.cc:164 DiscoverDevicesForPlatform] GPU device discovery failed: device_discovery.cc:89 ReadFileContents Failed to open file: "/sys/class/drm/card0/device/vendor"[m
+[32m08:03:37[0m | [1mINFO    [0m | [36m__main__[0m:[36m91[0m - 連接 Daily 房間: https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1
+/mnt/c/Users/User/Downloads/PatentFlow/voice_pipeline/bot.py:121: DeprecationWarning: The `model` parameter is deprecated. Use `settings=OpenAILLMService.Settings(model=...)` instead. If both are provided, `settings` takes precedence.
+  llm = OpenAILLMService(
+/mnt/c/Users/User/Downloads/PatentFlow/voice_pipeline/bot.py:142: DeprecationWarning: OpenAILLMContext is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  context = OpenAILLMContext(initial_messages)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/llm_response.py:326: DeprecationWarning: OpenAIUserContextAggregator (likely created with create_context_aggregator()) is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  super().__init__(**kwargs)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/llm_response.py:326: DeprecationWarning: OpenAIAssistantContextAggregator (likely created with create_context_aggregator()) is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  super().__init__(**kwargs)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/transports/base_input.py:152: DeprecationWarning: Parameter 'vad_analyzer' is deprecated. Use `LLMUserAggregator`'s `vad_analyzer` parameter, or `VADProcessor` if no `LLMUserAggregator` is needed.
+  warnings.warn(
+[32m08:03:44[0m | [1mINFO    [0m | [36m__main__[0m:[36m199[0m - 語音流水線啟動，等待參與者加入…
+[32m08:03:44[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m857[0m - Joining https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1
+[32m08:03:44[0m | [33m[1mWARNING [0m | [36mpipecat.services.stt_service[0m:[36m453[0m - WhisperSTTService#0: ttfs_p99_latency not set, using default 1.0s
+[32m08:03:45[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m878[0m - Joined https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1. Participant ID: d2012020-5477-40f0-9eac-320877ca5191, Meeting ID: b4689f66-ef17-4a17-aad3-96c4af994510
+[32m08:03:45[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m2907[0m - Participant joined 84ce3721-3591-4f30-a372-f104fd59c29e
+[32m08:03:45[0m | [1mINFO    [0m | [36m__main__[0m:[36m193[0m - 通話狀態更新: joining
+[32m08:03:45[0m | [1mINFO    [0m | [36m__main__[0m:[36m173[0m - 第一位參與者加入: 84ce3721-3591-4f30-a372-f104fd59c29e
+[32m08:03:45[0m | [1mINFO    [0m | [36m__main__[0m:[36m179[0m - bot-ready 已主動送出
+<string>:4: DeprecationWarning: LLMMessagesFrame is deprecated and will be removed in a future version. Instead, use either `LLMMessagesUpdateFrame` with `run_llm=True`, or `OpenAILLMContextFrame` with desired messages in a new context
+[32m08:03:45[0m | [1mINFO    [0m | [36m__main__[0m:[36m193[0m - 通話狀態更新: joined
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/openai_llm_context.py:144: DeprecationWarning: OpenAILLMContext is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  context = OpenAILLMContext()
+[32m08:03:58[0m | [1mINFO    [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m153[0m - [MinimaxTTS] 開始合成（18 字元）: '您好，我已就位擔任您的專利分析助理。'
+[32m08:03:59[0m | [31m[1mERROR   [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m190[0m - [MinimaxTTS] API 錯誤（attempt 1/3）: status_code=2061, msg=your current token plan not support model, speech-01-turbo
+[32m08:04:01[0m | [31m[1mERROR   [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m190[0m - [MinimaxTTS] API 錯誤（attempt 2/3）: status_code=2061, msg=your current token plan not support model, speech-01-turbo
+[32m08:04:03[0m | [31m[1mERROR   [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m190[0m - [MinimaxTTS] API 錯誤（attempt 3/3）: status_code=2061, msg=your current token plan not support model, speech-01-turbo
+[32m08:04:03[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36m744[0m - MinimaxTTSService#0 error: MiniMax TTS API 錯誤: {"base_resp":{"status_code":2061,"status_msg":"your current token plan not support model, speech-01-
+[32m08:04:03[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.task[0m:[36m903[0m - PipelineTask#0: Something went wrong: ErrorFrame#0(error: MiniMax TTS API 錯誤: {"base_resp":{"status_code":2061,"status_msg":"your current token plan not support model, speech-01-, fatal: False)
+[32m08:04:03[0m | [1mINFO    [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m153[0m - [MinimaxTTS] 開始合成（14 字元）: '我能為您提供以下協助：\n\n1'
+<string>:4: DeprecationWarning: OpenAILLMContextFrame is deprecated and will be removed in a future version. Use LLMContextFrame with the universal `LLMContext` and `LLMContextAggregatorPair` instead. See OpenAILLMContext docstring for migration guide.
+<string>:4: DeprecationWarning: OpenAILLMContextAssistantTimestampFrame is deprecated and will be removed in a future version. Use LLMContextAssistantTimestampFrame with the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+<string>:4: DeprecationWarning: OpenAILLMContextFrame is deprecated and will be removed in a future version. Use LLMContextFrame with the universal `LLMContext` and `LLMContextAggregatorPair` instead. See OpenAILLMContext docstring for migration guide.
+[32m08:04:14[0m | [1mINFO    [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m153[0m - [MinimaxTTS] 開始合成（3 字元）: '您好！'
+[32m08:04:15[0m | [31m[1mERROR   [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m190[0m - [MinimaxTTS] API 錯誤（attempt 1/3）: status_code=2061, msg=your current token plan not support model, speech-01-turbo
+[32m08:04:17[0m | [31m[1mERROR   [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m190[0m - [MinimaxTTS] API 錯誤（attempt 2/3）: status_code=2061, msg=your current token plan not support model, speech-01-turbo
+[32m08:04:19[0m | [31m[1mERROR   [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m190[0m - [MinimaxTTS] API 錯誤（attempt 3/3）: status_code=2061, msg=your current token plan not support model, speech-01-turbo
+[32m08:04:19[0m | [1mINFO    [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m153[0m - [MinimaxTTS] 開始合成（53 字元）: '我已準備就緒，可以協助您進行專利文件解讀、獨立請求項分析、Office Action 回應策略擬定等工作。'
+[32m08:04:19[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36m744[0m - MinimaxTTSService#0 error: MiniMax TTS API 錯誤: {"base_resp":{"status_code":2061,"status_msg":"your current token plan not support model, speech-01-
+[32m08:04:19[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.task[0m:[36m903[0m - PipelineTask#0: Something went wrong: ErrorFrame#1(error: MiniMax TTS API 錯誤: {"base_resp":{"status_code":2061,"status_msg":"your current token plan not support model, speech-01-, fatal: False)
+[32m08:04:19[0m | [31m[1mERROR   [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m190[0m - [MinimaxTTS] API 錯誤（attempt 1/3）: status_code=2061, msg=your current token plan not support model, speech-01-turbo
+[32m08:04:21[0m | [31m[1mERROR   [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m190[0m - [MinimaxTTS] API 錯誤（attempt 2/3）: status_code=2061, msg=your current token plan not support model, speech-01-turbo
+[32m08:04:23[0m | [31m[1mERROR   [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m190[0m - [MinimaxTTS] API 錯誤（attempt 3/3）: status_code=2061, msg=your current token plan not support model, speech-01-turbo
+[32m08:04:23[0m | [1mINFO    [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m153[0m - [MinimaxTTS] 開始合成（20 字元）: '請問您今天有什麼專利相關的問題需要討論？'
+[32m08:04:23[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36m744[0m - MinimaxTTSService#0 error: MiniMax TTS API 錯誤: {"base_resp":{"status_code":2061,"status_msg":"your current token plan not support model, speech-01-
+[32m08:04:23[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.task[0m:[36m903[0m - PipelineTask#0: Something went wrong: ErrorFrame#2(error: MiniMax TTS API 錯誤: {"base_resp":{"status_code":2061,"status_msg":"your current token plan not support model, speech-01-, fatal: False)
+[32m08:04:23[0m | [31m[1mERROR   [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m190[0m - [MinimaxTTS] API 錯誤（attempt 1/3）: status_code=2061, msg=your current token plan not support model, speech-01-turbo
+[32m08:04:25[0m | [31m[1mERROR   [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m190[0m - [MinimaxTTS] API 錯誤（attempt 2/3）: status_code=2061, msg=your current token plan not support model, speech-01-turbo
+[32m08:04:27[0m | [31m[1mERROR   [0m | [36mvoice_pipeline.services.minimax_tts[0m:[36m190[0m - [MinimaxTTS] API 錯誤（attempt 3/3）: status_code=2061, msg=your current token plan not support model, speech-01-turbo
+[32m08:04:27[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36m744[0m - MinimaxTTSService#0 error: MiniMax TTS API 錯誤: {"base_resp":{"status_code":2061,"status_msg":"your current token plan not support model, speech-01-
+[32m08:04:27[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.task[0m:[36m903[0m - PipelineTask#0: Something went wrong: ErrorFrame#3(error: MiniMax TTS API 錯誤: {"base_resp":{"status_code":2061,"status_msg":"your current token plan not support model, speech-01-, fatal: False)
+<string>:4: DeprecationWarning: OpenAILLMContextFrame is deprecated and will be removed in a future version. Use LLMContextFrame with the universal `LLMContext` and `LLMContextAggregatorPair` instead. See OpenAILLMContext docstring for migration guide.
+<string>:4: DeprecationWarning: OpenAILLMContextAssistantTimestampFrame is deprecated and will be removed in a future version. Use LLMContextAssistantTimestampFrame with the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+[32m08:04:36[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m2927[0m - Participant left 84ce3721-3591-4f30-a372-f104fd59c29e
+[32m08:04:36[0m | [1mINFO    [0m | [36m__main__[0m:[36m188[0m - 參與者離開: 84ce3721-3591-4f30-a372-f104fd59c29e，原因: leftCall
+[32m08:04:36[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m973[0m - Leaving https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1
+[32m08:04:36[0m | [1mINFO    [0m | [36m__main__[0m:[36m193[0m - 通話狀態更新: leaving
+[32m08:04:36[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m986[0m - Left https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1
