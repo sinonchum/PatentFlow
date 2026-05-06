@@ -129,10 +129,7 @@ graph TD
         TTS --> DailyOut[DailyTransport.output]
         DailyOut --> AssistantCtx[LLMAssistantContextAggregator]
     end
-
-
-
-``
+```
 
 ## Environment Setup
 
