@@ -1,4 +1,4 @@
-# ⚖️ PatentFlow — Offline Agentic Patent Prosecution Workspace
+# ⚖️ PatentFlow — Privacy-Aware Agentic Patent Prosecution Workspace
 
 ![UI: Next.js](https://img.shields.io/badge/UI-Next.js-black)
 ![API: FastAPI](https://img.shields.io/badge/API-FastAPI-009688)
@@ -6,12 +6,18 @@
 ![Broker: Redis](https://img.shields.io/badge/Broker-Redis-DC382D)
 ![Memory: SQLite](https://img.shields.io/badge/Memory-SQLite-003B57)
 ![LLM: Local](https://img.shields.io/badge/LLM-Local%20LLM-6B7280)
+![LLM: Kimi](https://img.shields.io/badge/LLM-Kimi%20%2F%20Moonshot-7C3AED)
+![Voice: Pipecat](https://img.shields.io/badge/Voice-Pipecat-2563EB)
+![TTS: Minimax](https://img.shields.io/badge/TTS-Minimax-10B981)
 
-**PatentFlow** is an enterprise-grade, privacy-first Document Processing Workspace designed for **European Patent Attorneys**. It targets the realities of prosecution work:
+**PatentFlow** is an enterprise-grade, privacy-aware Document Processing Workspace designed for **European Patent Attorneys**. It targets the realities of prosecution work:
 
 - **Art. 123(2) EPC** risk (added matter) where wording choices can be fatal
 - **Art. 56 EPC** inventive-step mapping where semantic interpretation matters
 - **Client confidentiality** where “cloud by default” is not acceptable
+- **Real-time attorney interaction** through a voice-first AI copilot
+
+PatentFlow is not a generic chatbot. It is a structured, auditable, attorney-in-the-loop prosecution workspace that combines live EPO data, local/private LLM routing, optional high-quality API reasoning, and real-time voice interaction.
 
 Built by an IP professional, for IP professionals.
 
@@ -21,32 +27,68 @@ Built by an IP professional, for IP professionals.
 
 ### 1) Legal accuracy under institutional constraints
 Patent prosecution is not “generic writing.” It is **risk management**:
+
 - A single phrasing shift can trigger an Art. 123(2) issue
 - Inventive-step reasoning requires structured, repeatable mapping
+- Prior-art analysis requires grounded evidence, not hallucinated citations
 - Quality and traceability matter more than “chatty” UX
 
-### 2) 100% offline operation for client confidentiality
-PatentFlow is designed to run fully locally:
-- Local LLM execution (air-gapped capable)
-- No external SaaS dependencies required for core workflows
-- Local persistence for attorney-specific preferences
+PatentFlow focuses on structured outputs such as claim charts, translation risk checks, and draft prosecution responses that remain reviewable by a qualified patent attorney.
 
-### 3) Enterprise UX: minimal, information-dense, institutional
+### 2) Privacy-aware operation for client confidentiality
+PatentFlow is designed around **privacy-aware LLM routing**:
+
+- Sensitive client files can be routed to local LLMs
+- Offline / air-gapped deployment remains possible for core workflows
+- Non-sensitive reasoning can use Kimi / Moonshot API via OpenAI-compatible mode
+- Local persistence for attorney-specific preferences
+- No sensitive client data should be written to logs or external telemetry
+
+The principle is simple:
+
+> Sensitive data stays local. Non-sensitive reasoning can use high-quality API models.
+
+### 3) Real-time voice copilot for prosecution work
+PatentFlow is not only a document automation tool. It also includes a **voice-first AI copilot** built with a Pipecat pipeline.
+
+Attorneys can speak naturally to the system and ask questions such as:
+
+- “What is the main difference between Claim 1 and D1?”
+- “Can we argue that D1 lacks dynamic TDRA configuration?”
+- “Check whether this amendment creates Art. 123(2) risk.”
+- “Rewrite this response in a more formal EPO attorney style.”
+
+The voice copilot is designed to make prosecution review more interactive, especially during first-pass analysis, claim chart inspection, and draft refinement.
+
+### 4) Enterprise UX: minimal, information-dense, institutional
 The UI follows a **Bloomberg Terminal-style** aesthetic:
+
 - High signal density
 - Subtle controls
 - Low-friction review of structured outputs
+- Calm, traceable progress for long-running legal analysis tasks
 
 ---
 
-## Trade Secret / Black Box Disclaimer (Intentional)
-Specific system prompts, proprietary dictionaries, and heuristic parsing algorithms are **intentionally omitted** from this public repository to protect intellectual property.
+## Legal Disclaimer & Usage Policy
+
+> **The attorney is the pilot; AI is the co-pilot.**
+
+PatentFlow is a specialized productivity tool for patent prosecution workflows. It assists with document analysis, prior-art comparison, claim chart generation, translation checks, and draft response preparation.
+
+It does **not** replace the professional judgment, legal advice, or strategic responsibility of a qualified patent attorney. All outputs are designed for attorney review, validation, and final approval before any professional or procedural use.
+
+---
+
+## Trade Secret / Black Box Disclaimer
+
+Specific system prompts, proprietary dictionaries, attorney-style rules, and heuristic parsing algorithms are **intentionally omitted** from this public repository to protect intellectual property.
 
 PatentFlow exposes stable interfaces and deterministic boundaries while keeping core prompt logic and proprietary linguistic assets internal.
 
 ---
 
-## System Architecture (High-Level)
+## System Architecture
 
 ```mermaid
 graph TD
@@ -55,6 +97,7 @@ graph TD
         UI -->|POST /api/generate| API[FastAPI Gateway :8000]
         UI -->|GET /api/status/:id| API
         UI -->|GET/POST /api/memory/*| API
+        UI -->|Voice Session| VoiceClient[Voice Copilot UI]
     end
 
     subgraph Backend [FastAPI + Celery Workers]
@@ -66,150 +109,23 @@ graph TD
         SQLite[(Local Profile DB)] --> Skills
     end
 
-    subgraph External [Optional Data Sources]
-        EPO[EPO API] -->|Prior Art Retrieval| API
+    subgraph ExternalData [Optional Data Sources]
+        EPO[EPO OPS / Register API] -->|Prior Art Retrieval| API
     end
 
-    subgraph AI [Local AI Runtime]
-        Skills --> LLM[(Local LLM)]
+    subgraph LLMRouting [Privacy-Aware LLM Runtime]
+        Skills --> Router[LLM Router]
+        Router -->|Sensitive Files| LocalLLM[(Local LLM / Ollama)]
+        Router -->|Non-Sensitive Tasks| Kimi[Kimi / Moonshot API]
     end
-```
 
----
-
-## Core Capabilities
-
-### 1) Art. 56 Claim Chart Generation (LLM-Assisted, Structured Output)
-Generate an attorney-reviewable claim chart with:
-- Feature-by-feature claim splitting
-- Prior art excerpt anchoring (D1/D2)
-- LLM semantic assessment:
-  - `Yes` / `No` / `Partial`
-  - reasoning captured per row for auditability
-
-### 2) Art. 123(2) Translation Verification (High-Risk Terminology Guardrails)
-A verification workflow designed to surface:
-- semantic mismatches
-- risky wording drift
-- institutional terminology consistency
-
-### 3) Dynamic Attorney Memory (Local Persistent Context Injection)
-PatentFlow supports a **Local User Preference Engine** that stores and recalls attorney preferences entirely offline:
-
-- **SQLite-backed memory** (zero external dependencies)
-- Profile-specific preferences persisted across sessions
-- Preferences are dynamically injected into the LLM system context at runtime
-
-**Business value**
-- Enforces firm-wide house style and attorney-specific drafting habits
-- Reduces “micro-friction” edits and repeated preference corrections
-- Supports consistent examiner strategy posture across matters
-
-### 4) One-Click EPO Prior Art Ingestion
-PatentFlow integrates EPO retrieval to support:
-- automated ingestion of cited prior art (e.g., D1/D2 full text)
-- reduced manual copy/paste and document hunting
-- faster turnaround from Office Action to structured analysis
-
-**Business value**
-- Cuts administrative time
-- Increases completeness and consistency of cited-document context
-- Improves auditability of the evidence basis used in analysis
-
----
-
-## Quick Start
-
-### Option A — Docker (recommended for reproducibility)
-1) Configure environment:
-- Copy `.env.example` → `.env`
-- Set `NEXT_PUBLIC_API_BASE_URL`, `REDIS_URL`, and LLM configuration as needed
-
-2) Start services:
-```bash
-docker compose up --build
-```
-
-Typical services:
-- `frontend` (Next.js UI)
-- `api` (FastAPI gateway)
-- `redis` (broker + result backend)
-- `worker` (Celery worker, local LLM calls)
-
-### Option B — Manual (local development)
-
-#### 1) Backend (FastAPI)
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-export REDIS_URL=redis://localhost:6379/0
-uvicorn src.api:app --host 0.0.0.0 --port 8000
-```
-
-#### 2) Redis
-```bash
-redis-server
-```
-
-#### 3) Celery Worker
-```bash
-export REDIS_URL=redis://localhost:6379/0
-celery -A src.celery_app.celery_app worker -l info --concurrency=1 --prefetch-multiplier=1
-```
-
-#### 4) Frontend (Next.js)
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open:
-- UI: `http://localhost:3000`
-- API: `http://localhost:8000/health`
-
----
-
-## API Overview (Selected)
-- `POST /api/generate`
-  - Runs the async pipeline (Celery) for claim chart + verification + draft outputs
-- `GET /api/status/{task_id}`
-  - Poll for progress and results
-- `GET /api/memory/{attorney_id}`
-  - Retrieve stored preference string
-- `POST /api/memory/add`
-  - Append a new preference rule for an attorney profile
-- `POST /api/generate-chart`
-  - Deterministic + LLM-assisted chart generation with optional `attorney_id`
-
----
-
-## Security & Privacy Posture
-- Designed for offline and air-gapped operation
-- Local persistence only (SQLite)
-- No dependency on third-party analytics, telemetry, or cloud inference for core workflows
-
----
-
-## Roadmap (Prioritized for Firm Integration)
-
-- [ ] **RAG with ChromaDB (Depth)**  
-  Local retrieval over firm-approved corpora (e.g., standards, prior OA templates) to improve long-document reasoning while controlling hallucination risk.
-
-- [ ] **.docx Export Workflow (Adoption)**  
-  Export claim charts and drafted responses into Word with firm formatting and review conventions.
-
-- [ ] **SSE Streaming (UX)**  
-  Upgrade from polling to server-sent events for long-running generation, keeping the interface calm and traceable.
-
-- [ ] **Policy Packs (Governance)**  
-  Versioned preference bundles per firm/practice group to standardize style and examiner strategy guidance.
-
----
-
-## License / Intended Use
-This repository is intended for professional evaluation and internal deployment patterns.
-
-For production firm deployments, additional hardening (audit logs, access controls, document storage policies) is recommended.
+    subgraph Voice [Pipecat Voice Copilot]
+        VoiceClient --> DailyIn[DailyTransport.input]
+        DailyIn --> VAD[SileroVADAnalyzer]
+        VAD --> STT[WhisperSTTService<br/>Local Faster Whisper]
+        STT --> UserCtx[LLMUserContextAggregator]
+        UserCtx --> VoiceLLM[OpenAILLMService<br/>Kimi / Moonshot Compatible]
+        VoiceLLM --> TTS[MinimaxTTSService<br/>Preferred]
+        TTS --> DailyOut[DailyTransport.output]
+        DailyOut --> AssistantCtx[LLMAssistantContextAggregator]
+    end
