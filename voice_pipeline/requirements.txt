@@ -1,0 +1,34 @@
+# ============================================================
+# PatentFlow Voice Pipeline — Python 依賴
+# 建議 Python 3.10–3.12（與 pipecat silero / onnx 相容性較穩）。
+# Windows + Python 3.13 若 pip 解析 numpy 失敗，可改用 WSL 或 Python 3.10 venv。
+# ============================================================
+
+# Pipecat 核心 + 必要插件
+# [daily]    → DailyTransport (WebRTC)
+# [silero]   → SileroVADAnalyzer (VAD)
+# [openai]   → OpenAILLMService (Kimi/Moonshot OpenAI 兼容模式)
+pipecat-ai[daily,silero,openai]==0.0.108
+
+# 非阻塞 HTTP（MinimaxSTT / MinimaxTTS 呼叫）
+aiohttp>=3.9.0
+
+# 環境變量讀取
+python-dotenv>=1.0.0
+
+# 結構化日誌
+loguru>=0.7.0
+
+# FastAPI Server（server.py）
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# ============================================================
+# 安裝指令
+# ============================================================
+# pip install -r voice_pipeline/requirements.txt
+#
+# 如需安裝 silero VAD（需要 PyTorch）：
+# pip install pipecat-ai[daily,silero,openai]
+# 或僅 CPU 版本：
+# pip install torch --index-url https://download.pytorch.org/whl/cpu

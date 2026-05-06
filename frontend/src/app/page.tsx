@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState, useRef, type ReactNode } from "react";
+import { useEffect, useState, useRef, useCallback, type ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UploadCloud, FileText, Zap, Download, ChevronRight, Sparkles, Shield, BarChart3, Languages, FileEdit, X, Radio } from "lucide-react";
+import type { PipecatClient } from "@pipecat-ai/client-js";
+import { LogLevel } from "@pipecat-ai/client-js";
+import { UploadCloud, FileText, Zap, Download, ChevronRight, Sparkles, Shield, BarChart3, Languages, FileEdit, X, Radio, Mic } from "lucide-react";
 
 type TaskState = "PENDING" | "STARTED" | "PROGRESS" | "SUCCESS" | "FAILURE";
 
@@ -107,6 +109,32 @@ function claimStatusBadge(statusText: string | undefined) {
   return { label: statusText || "—", className: "bg-white/[0.04] text-white/30 border-white/[0.06]" };
 }
 
+/** Pipecat 語音伺服器（與 PatentFlow FastAPI backend 分立） */
+const VOICE_SERVER_DEFAULT = "http://localhost:7860";
+
+type VoiceUiStatus = "idle" | "connecting" | "active" | "error";
+
+/** Pipecat DailyTransport 會把 join 失敗包成 TransportStartError，把 cause 鏈與提示一併露出 */
+function formatVoiceTransportError(err: unknown): string {
+  const messages: string[] = [];
+  let cur: unknown = err;
+  for (let i = 0; i < 5 && cur instanceof Error; i++) {
+    if (cur.message) messages.push(cur.message);
+    cur = cur.cause;
+  }
+  if (messages.length === 0 && err && typeof err === "object" && "message" in err) {
+    messages.push(String((err as { message: unknown }).message));
+  }
+  const text = messages.filter(Boolean).join(" · ") || String(err);
+  if (/not allowed|credentials|token|401|403|unauthor|jwt|expired|permission/i.test(text)) {
+    return `${text} — set DAILY_CLIENT_TOKEN in .env and restart the voice server`;
+  }
+  if (/Unable to connect to transport/i.test(text)) {
+    return `${text} — open F12 Console and search "Failed to join room" for details`;
+  }
+  return text;
+}
+
 function parseMarkdownPipeTable3(md: string): TranslationRow[] {
   const text = (md || "").trim();
   if (!text) return [];
@@ -162,6 +190,17 @@ export default function Workspace() {
   const [taskSubstepTotal, setTaskSubstepTotal] = useState<number | null>(null);
   const [taskError, setTaskError] = useState<string | null>(null);
   const [result, setResult] = useState<TaskResult | null>(null);
+
+  const voiceApiBase = process.env.NEXT_PUBLIC_VOICE_SERVER_URL ?? VOICE_SERVER_DEFAULT;
+
+  const voicePipecatRef = useRef<PipecatClient | null>(null);
+
+  /** 遠端 AI 語音自動播放節點，斷線時移除 */
+  const voiceAudioElemsRef = useRef<HTMLElement[]>([]);
+
+  const [voiceStatus, setVoiceStatus] = useState<VoiceUiStatus>("idle");
+  const [voiceConnected, setVoiceConnected] = useState(false);
+  const [voiceHint, setVoiceHint] = useState("Voice assistant offline · Click to start");
 
   const [officeActionText, setOfficeActionText] = useState<string>("");
   const [specificationText, setSpecificationText] = useState<string>("");
@@ -253,6 +292,137 @@ export default function Workspace() {
       setMemoryError(e instanceof Error ? e.message : String(e));
     } finally {
       setMemorySaving(false);
+    }
+  };
+
+  /** 離開 Daily 並釋放音軌／Pipecat 客戶端（不含 UI）；倚賴 ref，供元件卸載安全呼叫 */
+  const cleanupVoiceInfrastructure = useCallback(async (): Promise<void> => {
+    const client = voicePipecatRef.current;
+
+    const elems = [...voiceAudioElemsRef.current];
+    voiceAudioElemsRef.current = [];
+    for (const el of elems) {
+      try {
+        const m = el as HTMLMediaElement;
+        if (m.srcObject instanceof MediaStream) {
+          m.srcObject.getTracks().forEach((t) => t.stop());
+        }
+        el.remove();
+      } catch {
+        /* noop */
+      }
+    }
+
+    try {
+      await client?.disconnect();
+    } catch {
+      /* noop */
+    }
+
+    voicePipecatRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      void cleanupVoiceInfrastructure();
+    };
+  }, [cleanupVoiceInfrastructure]);
+
+  const handleVoiceToggle = async () => {
+    if (voiceStatus === "connecting") return;
+
+    if (voicePipecatRef.current !== null || voiceConnected) {
+      try {
+        setVoiceHint("Ending voice session…");
+        await cleanupVoiceInfrastructure();
+      } catch (e) {
+        console.warn("[voice] disconnect", e);
+      } finally {
+          setVoiceConnected(false);
+          setVoiceStatus("idle");
+          setVoiceHint("Voice assistant offline · Click to start");
+      }
+      return;
+    }
+
+    setVoiceStatus("connecting");
+    setVoiceHint("Connecting to voice server…");
+    try {
+      const [{ PipecatClient }, { DailyTransport }] = await Promise.all([
+        import("@pipecat-ai/client-js"),
+        import("@pipecat-ai/daily-transport"),
+      ]);
+
+      await cleanupVoiceInfrastructure();
+
+      const transport = new DailyTransport({ bufferLocalAudioUntilBotReady: true });
+
+      const attachRemoteAudioTrack = (track: MediaStreamTrack): void => {
+        if (track.kind !== "audio") return;
+        try {
+          let el: HTMLElement | null = null;
+          const t = track as MediaStreamTrack & { attach?: () => HTMLElement };
+          if (typeof t.attach === "function") {
+            el = t.attach();
+          } else {
+            const stream = new MediaStream([t]);
+            const audio = document.createElement("audio");
+            audio.autoplay = true;
+            audio.volume = 1;
+            audio.srcObject = stream;
+            audio.setAttribute("playsinline", "true");
+            el = audio;
+          }
+          if (!el) return;
+
+          el.setAttribute("playsinline", "true");
+          el.className =
+            "pointer-events-none fixed left-[-9999px] top-[-9999px] h-0 w-0 overflow-hidden opacity-0";
+          document.body.appendChild(el);
+          voiceAudioElemsRef.current.push(el);
+
+          if ("play" in el && typeof (el as HTMLMediaElement).play === "function") {
+            void (el as HTMLMediaElement).play().catch(() => {
+              setVoiceHint("Allow autoplay or click the page first to hear the assistant");
+            });
+          }
+        } catch (e) {
+          console.warn("[voice] attach remote audio", e);
+        }
+      };
+
+      const client = new PipecatClient({
+        transport,
+        enableMic: true,
+        enableCam: false,
+        callbacks: {
+          onUserStartedSpeaking: () => setVoiceHint("Listening…"),
+          onUserStoppedSpeaking: () => setVoiceHint("Processing…"),
+          onTrackStarted: (track, participant) => {
+            if (!participant || participant.local) return;
+            attachRemoteAudioTrack(track);
+          },
+        },
+      });
+
+      voicePipecatRef.current = client;
+      client.setLogLevel(LogLevel.WARN);
+
+      const startUrl = `${voiceApiBase.replace(/\/$/, "")}/start_bot`;
+      await client.startBotAndConnect({
+        endpoint: startUrl,
+        requestData: {},
+      });
+
+      setVoiceConnected(true);
+      setVoiceStatus("active");
+      setVoiceHint("Call active · Speak to the assistant");
+    } catch (err) {
+      console.error("[voice]", err);
+      await cleanupVoiceInfrastructure();
+      setVoiceConnected(false);
+      setVoiceStatus("error");
+      setVoiceHint(formatVoiceTransportError(err));
     }
   };
 
@@ -451,7 +621,35 @@ export default function Workspace() {
             <span className="text-lg font-semibold tracking-tight">PatentFlow</span>
             <span className="text-xs text-white/30 font-medium ml-1 hidden sm:inline">v2.0</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap justify-end md:flex-nowrap">
+            <button
+              type="button"
+              aria-pressed={voiceConnected}
+              disabled={voiceStatus === "connecting"}
+              title={voiceHint}
+              aria-label={
+                voiceStatus === "active" || voiceConnected
+                  ? "End PatentFlow Voice Assistant"
+                  : "Start PatentFlow Voice Assistant (localhost:7860)"
+              }
+              onClick={() => void handleVoiceToggle()}
+              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold shadow-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/80 disabled:opacity-70 ${
+                voiceStatus === "connecting"
+                  ? "bg-zinc-600 text-zinc-100 cursor-wait animate-pulse"
+                  : voiceStatus === "active" || voiceConnected
+                    ? "bg-red-600 text-white hover:bg-red-500"
+                    : voiceStatus === "error"
+                      ? "bg-amber-600 text-white hover:bg-amber-500"
+                      : "bg-blue-600 text-white hover:bg-blue-500"
+              }`}
+            >
+              <Mic className={`h-4 w-4 shrink-0 ${voiceStatus === "connecting" ? "opacity-75" : ""}`} aria-hidden />
+              {voiceStatus === "connecting"
+                ? "Connecting…"
+                : voiceStatus === "active" || voiceConnected
+                  ? "End Call"
+                  : "Voice"}
+            </button>
             <div className="hidden md:flex items-center gap-2">
               <span className="text-xs text-zinc-400 tracking-wide">Attorney Profile:</span>
               <select

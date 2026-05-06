@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PatentFlow 語音助理</title>
+
+  <!-- 客戶端邏輯使用 <script type="module">，透過 esm.sh 載入 Pipecat 與 DailyTransport -->
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      background: #1a1f2e;
+      border: 1px solid #2d3748;
+      border-radius: 16px;
+      padding: 32px;
+      width: 480px;
+      max-width: 95vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #63b3ed;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: #718096;
+      margin-bottom: 24px;
+    }
+
+    /* 狀態指示器 */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #0d1117;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 20px;
+      font-size: 0.85rem;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4a5568;
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .dot.idle      { background: #4a5568; }
+    .dot.connecting{ background: #ecc94b; animation: pulse 1s infinite; }
+    .dot.ready     { background: #48bb78; }
+    .dot.speaking  { background: #63b3ed; animation: pulse 0.5s infinite; }
+    .dot.error     { background: #fc8181; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .4; }
+    }
+
+    /* 對話記錄 */
+    .transcript {
+      background: #0d1117;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      height: 260px;
+      overflow-y: auto;
+      padding: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .msg {
+      max-width: 85%;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+    .msg.user {
+      align-self: flex-end;
+      background: #2b6cb0;
+      color: #bee3f8;
+    }
+    .msg.bot {
+      align-self: flex-start;
+      background: #2d3748;
+      color: #e2e8f0;
+    }
+    .msg .label {
+      font-size: 0.7rem;
+      opacity: 0.6;
+      margin-bottom: 3px;
+    }
+
+    .placeholder {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #4a5568;
+      font-size: 0.85rem;
+    }
+
+    /* 按鈕 */
+    .btn-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #btnConnect {
+      background: linear-gradient(135deg, #3182ce, #2b6cb0);
+      color: #fff;
+    }
+    #btnDisconnect {
+      background: #2d3748;
+      color: #fc8181;
+      border: 1px solid #fc8181;
+    }
+
+    /* 音量指示 */
+    .vol-bar {
+      height: 3px;
+      background: #2d3748;
+      border-radius: 2px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .vol-fill {
+      height: 100%;
+      background: #63b3ed;
+      width: 0%;
+      transition: width 0.1s;
+    }
+
+    /* 伺服器 URL 輸入 */
+    .server-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .server-row label {
+      font-size: 0.78rem;
+      color: #718096;
+      white-space: nowrap;
+    }
+    .server-row input {
+      flex: 1;
+      background: #0d1117;
+      border: 1px solid #2d3748;
+      border-radius: 6px;
+      padding: 6px 10px;
+      color: #e2e8f0;
+      font-size: 0.82rem;
+    }
+    .server-row input:focus {
+      outline: none;
+      border-color: #63b3ed;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>🎙 PatentFlow 語音助理</h1>
+  <p class="subtitle">由 Pipecat · MiniMax · Moonshot Kimi 驅動</p>
+
+  <!-- 伺服器地址 -->
+  <div class="server-row">
+    <label>後端 API 根</label>
+    <input id="serverUrl" type="text" value="" placeholder="留空則使用目前頁面來源（同源 API）" />
+  </div>
+
+  <!-- 狀態列 -->
+  <div class="status-bar">
+    <div class="dot idle" id="statusDot"></div>
+    <span id="statusText">尚未連接</span>
+  </div>
+
+  <!-- 音量指示 -->
+  <div class="vol-bar"><div class="vol-fill" id="volFill"></div></div>
+
+  <!-- 對話記錄 -->
+  <div class="transcript" id="transcript">
+    <div class="placeholder" id="placeholder">連接後即可開始語音對話…</div>
+  </div>
+
+  <!-- 控制按鈕 -->
+  <div class="btn-row">
+    <button id="btnConnect">連接</button>
+    <button id="btnDisconnect" disabled>掛斷</button>
+  </div>
+</div>
+
+<script type="module">
+import { PipecatClient, RTVIEvent } from "https://esm.sh/@pipecat-ai/client-js@1.7.0";
+import { DailyTransport } from "https://esm.sh/@pipecat-ai/daily-transport@1.6.1";
+
+const btnConnect    = document.getElementById("btnConnect");
+const btnDisconnect = document.getElementById("btnDisconnect");
+const statusDot     = document.getElementById("statusDot");
+const statusText    = document.getElementById("statusText");
+const transcriptEl  = document.getElementById("transcript");
+const placeholderEl = document.getElementById("placeholder");
+const volFill       = document.getElementById("volFill");
+const serverInput   = document.getElementById("serverUrl");
+
+if (!serverInput.value.trim()) {
+  serverInput.value = window.location.origin;
+}
+
+let client = null;
+
+function setStatus(state, text) {
+  statusDot.className = `dot ${state}`;
+  statusText.textContent = text;
+}
+
+function appendMessage(role, text) {
+  placeholderEl.style.display = "none";
+  const div = document.createElement("div");
+  div.className = `msg ${role}`;
+  div.innerHTML = `<div class="label">${role === "user" ? "你" : "助理"}</div>${escapeHtml(text)}`;
+  transcriptEl.appendChild(div);
+  transcriptEl.scrollTop = transcriptEl.scrollHeight;
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function resetAfterDisconnect() {
+  setStatus("idle", "尚未連接");
+  btnConnect.disabled = false;
+  btnDisconnect.disabled = true;
+  volFill.style.width = "0%";
+}
+
+btnConnect.addEventListener("click", async () => {
+  let serverUrl = serverInput.value.trim().replace(/\/$/, "");
+  if (!serverUrl) {
+    serverUrl = window.location.origin;
+  }
+
+  btnConnect.disabled = true;
+  btnDisconnect.disabled = false;
+  setStatus("connecting", "正在連接…");
+
+  try {
+    client = new PipecatClient({
+      transport: new DailyTransport({ bufferLocalAudioUntilBotReady: true }),
+      enableMic: true,
+      enableCam: false,
+      callbacks: {
+        onConnected: () => setStatus("connecting", "已連線，等待機器人…"),
+        onDisconnected: () => resetAfterDisconnect(),
+        onBotReady: () => setStatus("ready", "機器人已就緒，請開始說話"),
+        onUserStartedSpeaking: () => {
+          setStatus("speaking", "正在聆聽…");
+          volFill.style.width = "60%";
+        },
+        onUserStoppedSpeaking: () => {
+          setStatus("ready", "處理中…");
+          volFill.style.width = "0%";
+        },
+        onBotStartedSpeaking: () => setStatus("speaking", "助理回應中…"),
+        onBotStoppedSpeaking: () => setStatus("ready", "機器人已就緒，請開始說話"),
+        onUserTranscript: (data) => {
+          if (data?.final && data?.text) appendMessage("user", data.text);
+        },
+        onBotOutput: (data) => {
+          if (data?.text?.trim() && data?.aggregated_by === "sentence") {
+            appendMessage("bot", data.text.trim());
+          }
+        },
+        onError: (msg) => {
+          console.error("Pipecat 錯誤:", msg);
+          const d = msg?.data;
+          const text =
+            d && typeof d === "object" && "message" in d
+              ? d.message
+              : String(d ?? msg?.type ?? "unknown");
+          setStatus("error", `錯誤: ${text}`);
+        },
+      },
+    });
+
+    client.on(RTVIEvent.BotReady, () => setStatus("ready", "機器人已就緒，請開始說話"));
+    client.on(RTVIEvent.Disconnected, () => resetAfterDisconnect());
+    client.on(RTVIEvent.BotTranscript, (data) => {
+      if (data?.text?.trim()) appendMessage("bot", data.text.trim());
+    });
+
+    await client.startBotAndConnect({
+      endpoint: `${serverUrl}/connect`,
+    });
+  } catch (err) {
+    console.error("連接失敗:", err);
+    setStatus("error", `連接失敗: ${err?.message ?? err}`);
+    btnConnect.disabled = false;
+    btnDisconnect.disabled = true;
+    client = null;
+  }
+});
+
+btnDisconnect.addEventListener("click", async () => {
+  btnDisconnect.disabled = true;
+  if (client) {
+    try { await client.disconnect(); } catch (_) {}
+    client = null;
+  }
+  resetAfterDisconnect();
+});
+</script>
+</body>
+</html>

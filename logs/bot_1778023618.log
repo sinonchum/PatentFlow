@@ -1,0 +1,23 @@
+2026-05-06 01:26:59.007 | INFO     | pipecat:<module>:14 - ᓚᘏᗢ Pipecat 0.0.108 (Python 3.10.12 (main, Mar  3 2026, 11:56:32) [GCC 11.4.0]) ᓚᘏᗢ
+[0;93m2026-05-06 01:27:03.998339686 [W:onnxruntime:Default, device_discovery.cc:164 DiscoverDevicesForPlatform] GPU device discovery failed: device_discovery.cc:89 ReadFileContents Failed to open file: "/sys/class/drm/card0/device/vendor"[m
+[32m01:27:18[0m | [1mINFO    [0m | [36m__main__[0m:[36m90[0m - 連接 Daily 房間: https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1
+/mnt/c/Users/User/Downloads/PatentFlow/voice_pipeline/bot.py:114: DeprecationWarning: The `model` parameter is deprecated. Use `settings=OpenAILLMService.Settings(model=...)` instead. If both are provided, `settings` takes precedence.
+  llm = OpenAILLMService(
+/mnt/c/Users/User/Downloads/PatentFlow/voice_pipeline/bot.py:135: DeprecationWarning: OpenAILLMContext is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  context = OpenAILLMContext(initial_messages)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/llm_response.py:326: DeprecationWarning: OpenAIUserContextAggregator (likely created with create_context_aggregator()) is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  super().__init__(**kwargs)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/llm_response.py:326: DeprecationWarning: OpenAIAssistantContextAggregator (likely created with create_context_aggregator()) is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  super().__init__(**kwargs)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/transports/base_input.py:152: DeprecationWarning: Parameter 'vad_analyzer' is deprecated. Use `LLMUserAggregator`'s `vad_analyzer` parameter, or `VADProcessor` if no `LLMUserAggregator` is needed.
+  warnings.warn(
+[32m01:27:18[0m | [1mINFO    [0m | [36m__main__[0m:[36m192[0m - 語音流水線啟動，等待參與者加入…
+[32m01:27:18[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m857[0m - Joining https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1
+[32m01:27:18[0m | [33m[1mWARNING [0m | [36mpipecat.services.stt_service[0m:[36m453[0m - MinimaxSTTService#0: ttfs_p99_latency not set, using default 1.0s
+{"timestamp":"2026-05-05T23:27:19.339072Z","level":"ERROR","fields":{"message":"account-missing-payment-method"},"target":"daily_core::call_client"}
+{"timestamp":"2026-05-05T23:27:19.339263Z","level":"ERROR","fields":{"message":"account-missing-payment-method"},"target":"daily_core::event"}
+{"timestamp":"2026-05-05T23:27:19.340451Z","level":"ERROR","fields":{"message":"join (request 2) encountered an error: Connection(Api(RoomLookup(RoomInfoError(Unhandled(\"account-missing-payment-method\")))))"},"target":"daily_core::native::ffi::call_client"}
+[32m01:27:19[0m | [31m[1mERROR   [0m | [36mpipecat.transports.daily.transport[0m:[36m889[0m - Error joining https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1: Connection(Api(RoomLookup(RoomInfoError(Unhandled("account-missing-payment-method")))))
+[32m01:27:19[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36m744[0m - DailyInputTransport#0 error: Error joining https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1: Connection(Api(RoomLookup(RoomInfoError(Unhandled("account-missing-payment-method")))))
+[32m01:27:19[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.task[0m:[36m903[0m - PipelineTask#0: Something went wrong: ErrorFrame#0(error: Error joining https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1: Connection(Api(RoomLookup(RoomInfoError(Unhandled("account-missing-payment-method"))))), fatal: False)
+[32m01:31:16[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.runner[0m:[36m136[0m - Interruption detected. Cancelling runner PipelineRunner#0

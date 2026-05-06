@@ -1,0 +1,120 @@
+2026-05-06 01:53:11.255 | INFO     | pipecat:<module>:14 - ᓚᘏᗢ Pipecat 0.0.108 (Python 3.10.12 (main, Mar  3 2026, 11:56:32) [GCC 11.4.0]) ᓚᘏᗢ
+[0;93m2026-05-06 01:53:20.351780177 [W:onnxruntime:Default, device_discovery.cc:164 DiscoverDevicesForPlatform] GPU device discovery failed: device_discovery.cc:89 ReadFileContents Failed to open file: "/sys/class/drm/card0/device/vendor"[m
+[32m01:53:32[0m | [1mINFO    [0m | [36m__main__[0m:[36m90[0m - 連接 Daily 房間: https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1
+/mnt/c/Users/User/Downloads/PatentFlow/voice_pipeline/bot.py:115: DeprecationWarning: The `model` parameter is deprecated. Use `settings=OpenAILLMService.Settings(model=...)` instead. If both are provided, `settings` takes precedence.
+  llm = OpenAILLMService(
+/mnt/c/Users/User/Downloads/PatentFlow/voice_pipeline/bot.py:136: DeprecationWarning: OpenAILLMContext is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  context = OpenAILLMContext(initial_messages)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/llm_response.py:326: DeprecationWarning: OpenAIUserContextAggregator (likely created with create_context_aggregator()) is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  super().__init__(**kwargs)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/llm_response.py:326: DeprecationWarning: OpenAIAssistantContextAggregator (likely created with create_context_aggregator()) is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  super().__init__(**kwargs)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/transports/base_input.py:152: DeprecationWarning: Parameter 'vad_analyzer' is deprecated. Use `LLMUserAggregator`'s `vad_analyzer` parameter, or `VADProcessor` if no `LLMUserAggregator` is needed.
+  warnings.warn(
+[32m01:53:33[0m | [1mINFO    [0m | [36m__main__[0m:[36m193[0m - 語音流水線啟動，等待參與者加入…
+[32m01:53:33[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m857[0m - Joining https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1
+[32m01:53:33[0m | [33m[1mWARNING [0m | [36mpipecat.services.stt_service[0m:[36m453[0m - MinimaxSTTService#0: ttfs_p99_latency not set, using default 1.0s
+[32m01:53:35[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m878[0m - Joined https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1. Participant ID: 969b0123-74c3-4273-b7a0-82d06de442b6, Meeting ID: 2158bda6-cce8-4638-abf0-0690d20c3851
+[32m01:53:35[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m2907[0m - Participant joined 34c75085-99ca-4016-b2fd-484389eb569b
+[32m01:53:35[0m | [1mINFO    [0m | [36m__main__[0m:[36m187[0m - 通話狀態更新: joining
+[32m01:53:35[0m | [1mINFO    [0m | [36m__main__[0m:[36m167[0m - 第一位參與者加入: 34c75085-99ca-4016-b2fd-484389eb569b
+[32m01:53:35[0m | [1mINFO    [0m | [36m__main__[0m:[36m173[0m - bot-ready 已主動送出
+<string>:4: DeprecationWarning: LLMMessagesFrame is deprecated and will be removed in a future version. Instead, use either `LLMMessagesUpdateFrame` with `run_llm=True`, or `OpenAILLMContextFrame` with desired messages in a new context
+[32m01:53:35[0m | [1mINFO    [0m | [36m__main__[0m:[36m187[0m - 通話狀態更新: joined
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/openai_llm_context.py:144: DeprecationWarning: OpenAILLMContext is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  context = OpenAILLMContext()
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+<string>:4: DeprecationWarning: OpenAILLMContextFrame is deprecated and will be removed in a future version. Use LLMContextFrame with the universal `LLMContext` and `LLMContextAggregatorPair` instead. See OpenAILLMContext docstring for migration guide.
+<string>:4: DeprecationWarning: OpenAILLMContextAssistantTimestampFrame is deprecated and will be removed in a future version. Use LLMContextAssistantTimestampFrame with the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+[32m01:54:27[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m2927[0m - Participant left 34c75085-99ca-4016-b2fd-484389eb569b
+[32m01:54:27[0m | [1mINFO    [0m | [36m__main__[0m:[36m182[0m - 參與者離開: 34c75085-99ca-4016-b2fd-484389eb569b，原因: leftCall
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+[32m01:54:47[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.task[0m:[36m760[0m - PipelineTask#0: timeout waiting for CancelFrame#0(reason: None) to reach the end of the pipeline (being blocked somewhere?).
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 網路錯誤 (attempt 2/3): Server disconnected
+[32m01:54:47[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.task[0m:[36m1080[0m - Dangling tasks detected: ['OpenAIUserContextAggregator#0::_aggregation_task_handler', 'MinimaxTTSService#0::_audio_context_task_handler', 'DailyOutputTransport#0::_clock_task_handler', 'DailyOutputTransport#0::_audio_task_handler']
+{"timestamp":"2026-05-05T23:54:47.644027Z","level":"ERROR","fields":{"message":"Metrics failed to get snapshot: Cancelled"},"target":"daily_core::metrics::native"}
+{"timestamp":"2026-05-05T23:54:47.644392Z","level":"ERROR","fields":{"message":"Failed to send LogLine(s): ResponseCanceled","SendLog":false},"target":"daily_core::metrics::shared"}

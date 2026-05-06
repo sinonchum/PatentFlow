@@ -1,0 +1,38 @@
+2026-05-06 02:09:06.559 | INFO     | pipecat:<module>:14 - ᓚᘏᗢ Pipecat 0.0.108 (Python 3.10.12 (main, Mar  3 2026, 11:56:32) [GCC 11.4.0]) ᓚᘏᗢ
+[0;93m2026-05-06 02:09:13.399159792 [W:onnxruntime:Default, device_discovery.cc:164 DiscoverDevicesForPlatform] GPU device discovery failed: device_discovery.cc:89 ReadFileContents Failed to open file: "/sys/class/drm/card0/device/vendor"[m
+[32m02:09:25[0m | [1mINFO    [0m | [36m__main__[0m:[36m91[0m - 連接 Daily 房間: https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+/mnt/c/Users/User/Downloads/PatentFlow/voice_pipeline/bot.py:121: DeprecationWarning: The `model` parameter is deprecated. Use `settings=OpenAILLMService.Settings(model=...)` instead. If both are provided, `settings` takes precedence.
+  llm = OpenAILLMService(
+/mnt/c/Users/User/Downloads/PatentFlow/voice_pipeline/bot.py:142: DeprecationWarning: OpenAILLMContext is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  context = OpenAILLMContext(initial_messages)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/llm_response.py:326: DeprecationWarning: OpenAIUserContextAggregator (likely created with create_context_aggregator()) is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  super().__init__(**kwargs)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/llm_response.py:326: DeprecationWarning: OpenAIAssistantContextAggregator (likely created with create_context_aggregator()) is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  super().__init__(**kwargs)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/transports/base_input.py:152: DeprecationWarning: Parameter 'vad_analyzer' is deprecated. Use `LLMUserAggregator`'s `vad_analyzer` parameter, or `VADProcessor` if no `LLMUserAggregator` is needed.
+  warnings.warn(
+[32m02:09:35[0m | [1mINFO    [0m | [36m__main__[0m:[36m199[0m - 語音流水線啟動，等待參與者加入…
+[32m02:09:35[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m857[0m - Joining https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1
+[32m02:09:35[0m | [33m[1mWARNING [0m | [36mpipecat.services.stt_service[0m:[36m453[0m - WhisperSTTService#0: ttfs_p99_latency not set, using default 1.0s
+[32m02:09:37[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m878[0m - Joined https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1. Participant ID: 177b8b29-46c7-4cf9-87c9-2cfc2427ec0e, Meeting ID: fc84b08d-bd42-4ab9-9bde-dc2d26a3e6ba
+[32m02:09:37[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m2907[0m - Participant joined a40d08af-6fa1-4f08-ab69-1539167116b3
+[32m02:09:37[0m | [1mINFO    [0m | [36m__main__[0m:[36m193[0m - 通話狀態更新: joining
+[32m02:09:37[0m | [1mINFO    [0m | [36m__main__[0m:[36m173[0m - 第一位參與者加入: a40d08af-6fa1-4f08-ab69-1539167116b3
+[32m02:09:37[0m | [1mINFO    [0m | [36m__main__[0m:[36m179[0m - bot-ready 已主動送出
+<string>:4: DeprecationWarning: LLMMessagesFrame is deprecated and will be removed in a future version. Instead, use either `LLMMessagesUpdateFrame` with `run_llm=True`, or `OpenAILLMContextFrame` with desired messages in a new context
+[32m02:09:37[0m | [1mINFO    [0m | [36m__main__[0m:[36m193[0m - 通話狀態更新: joined
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/openai_llm_context.py:144: DeprecationWarning: OpenAILLMContext is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  context = OpenAILLMContext()
+<string>:4: DeprecationWarning: OpenAILLMContextFrame is deprecated and will be removed in a future version. Use LLMContextFrame with the universal `LLMContext` and `LLMContextAggregatorPair` instead. See OpenAILLMContext docstring for migration guide.
+<string>:4: DeprecationWarning: OpenAILLMContextFrame is deprecated and will be removed in a future version. Use LLMContextFrame with the universal `LLMContext` and `LLMContextAggregatorPair` instead. See OpenAILLMContext docstring for migration guide.
+<string>:4: DeprecationWarning: OpenAILLMContextFrame is deprecated and will be removed in a future version. Use LLMContextFrame with the universal `LLMContext` and `LLMContextAggregatorPair` instead. See OpenAILLMContext docstring for migration guide.
+<string>:4: DeprecationWarning: OpenAILLMContextFrame is deprecated and will be removed in a future version. Use LLMContextFrame with the universal `LLMContext` and `LLMContextAggregatorPair` instead. See OpenAILLMContext docstring for migration guide.
+<string>:4: DeprecationWarning: OpenAILLMContextFrame is deprecated and will be removed in a future version. Use LLMContextFrame with the universal `LLMContext` and `LLMContextAggregatorPair` instead. See OpenAILLMContext docstring for migration guide.
+<string>:4: DeprecationWarning: OpenAILLMContextAssistantTimestampFrame is deprecated and will be removed in a future version. Use LLMContextAssistantTimestampFrame with the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+[32m02:11:28[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m2927[0m - Participant left a40d08af-6fa1-4f08-ab69-1539167116b3
+[32m02:11:28[0m | [1mINFO    [0m | [36m__main__[0m:[36m188[0m - 參與者離開: a40d08af-6fa1-4f08-ab69-1539167116b3，原因: leftCall
+[32m02:11:28[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m973[0m - Leaving https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1
+[32m02:11:28[0m | [1mINFO    [0m | [36m__main__[0m:[36m193[0m - 通話狀態更新: leaving
+[32m02:11:28[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m986[0m - Left https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1

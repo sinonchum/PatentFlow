@@ -1,0 +1,80 @@
+2026-05-06 01:39:33.010 | INFO     | pipecat:<module>:14 - ᓚᘏᗢ Pipecat 0.0.108 (Python 3.10.12 (main, Mar  3 2026, 11:56:32) [GCC 11.4.0]) ᓚᘏᗢ
+[0;93m2026-05-06 01:39:39.609116742 [W:onnxruntime:Default, device_discovery.cc:164 DiscoverDevicesForPlatform] GPU device discovery failed: device_discovery.cc:89 ReadFileContents Failed to open file: "/sys/class/drm/card0/device/vendor"[m
+[32m01:39:52[0m | [1mINFO    [0m | [36m__main__[0m:[36m90[0m - 連接 Daily 房間: https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1
+/mnt/c/Users/User/Downloads/PatentFlow/voice_pipeline/bot.py:114: DeprecationWarning: The `model` parameter is deprecated. Use `settings=OpenAILLMService.Settings(model=...)` instead. If both are provided, `settings` takes precedence.
+  llm = OpenAILLMService(
+/mnt/c/Users/User/Downloads/PatentFlow/voice_pipeline/bot.py:135: DeprecationWarning: OpenAILLMContext is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  context = OpenAILLMContext(initial_messages)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/llm_response.py:326: DeprecationWarning: OpenAIUserContextAggregator (likely created with create_context_aggregator()) is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  super().__init__(**kwargs)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/llm_response.py:326: DeprecationWarning: OpenAIAssistantContextAggregator (likely created with create_context_aggregator()) is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  super().__init__(**kwargs)
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/transports/base_input.py:152: DeprecationWarning: Parameter 'vad_analyzer' is deprecated. Use `LLMUserAggregator`'s `vad_analyzer` parameter, or `VADProcessor` if no `LLMUserAggregator` is needed.
+  warnings.warn(
+[32m01:39:53[0m | [1mINFO    [0m | [36m__main__[0m:[36m192[0m - 語音流水線啟動，等待參與者加入…
+[32m01:39:53[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m857[0m - Joining https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1
+[32m01:39:53[0m | [33m[1mWARNING [0m | [36mpipecat.services.stt_service[0m:[36m453[0m - MinimaxSTTService#0: ttfs_p99_latency not set, using default 1.0s
+[32m01:39:54[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m878[0m - Joined https://davidlin.daily.co/xv7NcjP7907cxVWi0QL1. Participant ID: c20631da-318c-4c19-8b78-9054b0623fe9, Meeting ID: 58459f19-ce29-466e-96eb-b421639167a4
+[32m01:39:54[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m2907[0m - Participant joined 231bc72c-59cf-459b-8bd4-eb4d429d9e7c
+[32m01:39:54[0m | [1mINFO    [0m | [36m__main__[0m:[36m186[0m - 通話狀態更新: joining
+[32m01:39:54[0m | [1mINFO    [0m | [36m__main__[0m:[36m166[0m - 第一位參與者加入: 231bc72c-59cf-459b-8bd4-eb4d429d9e7c
+[32m01:39:54[0m | [1mINFO    [0m | [36m__main__[0m:[36m172[0m - bot-ready 已主動送出
+<string>:4: DeprecationWarning: LLMMessagesFrame is deprecated and will be removed in a future version. Instead, use either `LLMMessagesUpdateFrame` with `run_llm=True`, or `OpenAILLMContextFrame` with desired messages in a new context
+[32m01:39:54[0m | [1mINFO    [0m | [36m__main__[0m:[36m186[0m - 通話狀態更新: joined
+/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/processors/aggregators/openai_llm_context.py:144: DeprecationWarning: OpenAILLMContext is deprecated and will be removed in a future version. Use the universal LLMContext and LLMContextAggregatorPair instead. See OpenAILLMContext docstring for migration guide.
+  context = OpenAILLMContext()
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+[32m01:40:08[0m | [1mINFO    [0m | [36mpipecat.transports.daily.transport[0m:[36m2927[0m - Participant left 231bc72c-59cf-459b-8bd4-eb4d429d9e7c
+[32m01:40:08[0m | [1mINFO    [0m | [36m__main__[0m:[36m181[0m - 參與者離開: 231bc72c-59cf-459b-8bd4-eb4d429d9e7c，原因: leftCall
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+[32m01:40:13[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36m744[0m - MinimaxTTSService#0 exception (/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/services/tts_service.py:1048): Error processing frame: MinimaxTTSService.run_tts() takes 2 positional arguments but 3 were given
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+[32m01:40:19[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36m744[0m - MinimaxTTSService#0 exception (/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/services/tts_service.py:1048): Error processing frame: MinimaxTTSService.run_tts() takes 2 positional arguments but 3 were given
+[32m01:40:19[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36m744[0m - MinimaxTTSService#0 exception (/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/services/tts_service.py:1048): Error processing frame: MinimaxTTSService.run_tts() takes 2 positional arguments but 3 were given
+[32m01:40:20[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36m744[0m - MinimaxTTSService#0 exception (/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/services/tts_service.py:1048): Error processing frame: MinimaxTTSService.run_tts() takes 2 positional arguments but 3 were given
+[32m01:40:20[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36m744[0m - MinimaxTTSService#0 exception (/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/services/tts_service.py:1048): Error processing frame: MinimaxTTSService.run_tts() takes 2 positional arguments but 3 were given
+[32m01:40:20[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36m744[0m - MinimaxTTSService#0 exception (/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/services/tts_service.py:1048): Error processing frame: MinimaxTTSService.run_tts() takes 2 positional arguments but 3 were given
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+[32m01:40:22[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36m744[0m - MinimaxTTSService#0 exception (/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/services/tts_service.py:1048): Error processing frame: MinimaxTTSService.run_tts() takes 2 positional arguments but 3 were given
+[32m01:40:22[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36m744[0m - MinimaxTTSService#0 exception (/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/services/tts_service.py:1048): Error processing frame: MinimaxTTSService.run_tts() takes 2 positional arguments but 3 were given
+[32m01:40:22[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36m744[0m - MinimaxTTSService#0 exception (/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/services/tts_service.py:1048): Error processing frame: MinimaxTTSService.run_tts() takes 2 positional arguments but 3 were given
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+[32m01:40:23[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36m744[0m - MinimaxTTSService#0 exception (/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/services/tts_service.py:1048): Error processing frame: MinimaxTTSService.run_tts() takes 2 positional arguments but 3 were given
+[32m01:40:24[0m | [31m[1mERROR   [0m | [36mpipecat.processors.frame_processor[0m:[36m744[0m - MinimaxTTSService#0 exception (/mnt/c/Users/User/Downloads/PatentFlow/venv/lib/python3.10/site-packages/pipecat/services/tts_service.py:1048): Error processing frame: MinimaxTTSService.run_tts() takes 2 positional arguments but 3 were given
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 3/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 1/3): 404 page not found
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] HTTP 404 (attempt 2/3): 404 page not found
+[32m01:40:28[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.task[0m:[36m760[0m - PipelineTask#0: timeout waiting for CancelFrame#0(reason: None) to reach the end of the pipeline (being blocked somewhere?).
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 網路錯誤 (attempt 3/3): Server disconnected
+ERROR:voice_pipeline.services.minimax_stt:[MinimaxSTT] 所有重試均失敗，跳過此次轉錄。
+WARNING:voice_pipeline.services.minimax_stt:[MinimaxSTT] 轉錄結果為空，略過此幀。
+[32m01:40:28[0m | [33m[1mWARNING [0m | [36mpipecat.pipeline.task[0m:[36m1080[0m - Dangling tasks detected: ['OpenAIUserContextAggregator#0::_aggregation_task_handler', 'MinimaxTTSService#0::_audio_context_task_handler', 'DailyOutputTransport#0::_clock_task_handler', 'DailyOutputTransport#0::_audio_task_handler']
+ERROR:asyncio:Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x7f84010c01c0>
+{"timestamp":"2026-05-05T23:40:29.119989Z","level":"ERROR","fields":{"message":"Healthcheck failed: ResponseCanceled"},"target":"daily_core::native::signal_channel"}
+{"timestamp":"2026-05-05T23:40:29.230548Z","level":"ERROR","fields":{"message":"Metrics failed to get snapshot: Cancelled"},"target":"daily_core::metrics::native"}
+{"timestamp":"2026-05-05T23:40:29.230842Z","level":"ERROR","fields":{"message":"Failed to send LogLine(s): ResponseCanceled","SendLog":false},"target":"daily_core::metrics::shared"}
