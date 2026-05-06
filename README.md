@@ -297,3 +297,7 @@ uvicorn voice_pipeline.server:app --host 0.0.0.0 --port 7860 --reload
 ```
 
 The voice UI is served from `http://localhost:7860/`. To use it, configure either `DAILY_API_KEY` for dynamic room creation or `DAILY_SAMPLE_ROOM_URL` for a fixed test room, plus the required Moonshot and MiniMax credentials in `.env`.
+
+
+
+Demo Video link: https://www.youtube.com/watch?v=hJniZueUi50
