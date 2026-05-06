@@ -129,3 +129,174 @@ graph TD
         TTS --> DailyOut[DailyTransport.output]
         DailyOut --> AssistantCtx[LLMAssistantContextAggregator]
     end
+
+
+
+``
+
+## Environment Setup
+
+### Prerequisites
+
+- **Python 3.11** for the FastAPI API, Celery worker, and core pipeline
+- **Node.js 20+** for the Next.js frontend
+- **Redis 7** as the Celery broker / result backend
+- **Docker + Docker Compose** if you prefer containerized startup
+- **Optional:** Ollama or another OpenAI-compatible local endpoint for privacy-sensitive tasks
+- **Optional:** Moonshot / Kimi, OpenAI, or Anthropic-compatible credentials for non-sensitive cloud reasoning
+- **Optional:** EPO OPS credentials for live EPO data ingestion
+- **Optional:** Daily + MiniMax credentials for the voice copilot
+
+### 1) Install backend dependencies
+
+```bash
+python3.11 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 2) Install frontend dependencies
+
+```bash
+cd frontend
+npm ci
+cd ..
+```
+
+### 3) Create a root `.env` file
+
+Create a `.env` file in the project root and start with the following template:
+
+```bash
+# Core runtime
+REDIS_URL=redis://localhost:6379/0
+ALLOWED_ORIGINS=http://localhost:3000
+PATENTFLOW_API_KEY=
+
+# Optional: enable live EPO ingestion
+EPO_ENABLED=false
+EPO_CONSUMER_KEY=
+EPO_CONSUMER_SECRET=
+
+# Local/private LLM routing
+LLM_BASE_URL=http://127.0.0.1:11434
+LLM_MODEL=
+LLM_API_KEY=
+
+# Optional: cloud reasoning for non-sensitive tasks
+# For Moonshot / Kimi, keep CLOUD_PROVIDER=openai because the API is OpenAI-compatible.
+CLOUD_PROVIDER=openai
+CLOUD_BASE_URL=https://api.moonshot.cn
+CLOUD_MODEL=moonshot-v1-8k
+OPENAI_API_KEY=
+
+# Optional: voice copilot
+MOONSHOT_API_KEY=
+MOONSHOT_BASE_URL=https://api.moonshot.cn/v1
+MOONSHOT_MODEL=moonshot-v1-8k
+DAILY_SAMPLE_ROOM_URL=
+DAILY_API_KEY=
+DAILY_TOKEN=
+DAILY_CLIENT_TOKEN=
+MINIMAX_API_KEY=
+MINIMAX_GROUP_ID=
+MINIMAX_VOICE_ID=male-qn-qingse
+VOICE_SERVER_HOST=0.0.0.0
+VOICE_SERVER_PORT=7860
+```
+
+Notes:
+
+- If `LLM_MODEL` is left empty and no cloud model is configured, the application can still boot, but LLM-dependent features may fall back to the built-in mock engine for debugging.
+- `NEXT_PUBLIC_API_BASE_URL` is used by the frontend and should usually be `http://localhost:8000` in local development.
+- If you use an OpenAI-compatible local endpoint instead of native Ollama, set `LLM_BASE_URL` to that endpoint and provide `LLM_API_KEY` if required.
+
+## How to Run
+
+### Option A: Run the core stack with Docker Compose
+
+This starts Redis, the FastAPI API, the Celery worker, and the frontend.
+
+```bash
+docker compose up --build
+```
+
+After startup:
+
+- Frontend: `http://localhost:3000`
+- API docs: `http://localhost:8000/docs`
+- Redis: `localhost:6379`
+
+### Option B: Run locally for development
+
+#### 1) Start Redis
+
+If you already have Redis installed locally, start that service. Otherwise you can use Docker just for Redis:
+
+```bash
+docker run --rm -p 6379:6379 redis:7-alpine
+```
+
+#### 2) Start the FastAPI backend
+
+```bash
+source venv/bin/activate
+uvicorn src.api:app --host 0.0.0.0 --port 8000 --reload
+```
+
+#### 3) Start the Celery worker
+
+Open a second terminal:
+
+```bash
+source venv/bin/activate
+celery -A src.celery_app.celery_app worker --loglevel=info --concurrency=1 --prefetch-multiplier=1
+```
+
+#### 4) Start the frontend
+
+Open a third terminal:
+
+```bash
+cd frontend
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev
+```
+
+Then open `http://localhost:3000`.
+
+### Optional: Run the CLI pipeline directly
+
+For offline or script-based testing, you can run the pipeline without the web UI:
+
+```bash
+source venv/bin/activate
+bash scripts/run_pipeline.sh data/raw/sample_oa.txt
+```
+
+With a specification file:
+
+```bash
+source venv/bin/activate
+bash scripts/run_pipeline.sh data/raw/sample_oa.txt realCase/case1_EP3654128_5G-NR-Scheduling/specification.txt
+```
+
+Generated artifacts are written to `data/output/`.
+
+### Optional: Run the voice copilot
+
+Install the voice-specific dependencies:
+
+```bash
+source venv/bin/activate
+pip install -r voice_pipeline/requirements.txt
+```
+
+Start the voice server:
+
+```bash
+source venv/bin/activate
+uvicorn voice_pipeline.server:app --host 0.0.0.0 --port 7860 --reload
+```
+
+The voice UI is served from `http://localhost:7860/`. To use it, configure either `DAILY_API_KEY` for dynamic room creation or `DAILY_SAMPLE_ROOM_URL` for a fixed test room, plus the required Moonshot and MiniMax credentials in `.env`.
