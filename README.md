@@ -25,10 +25,10 @@ Patent prosecution is not “generic writing.” It is **risk management**:
 - Inventive-step reasoning requires structured, repeatable mapping
 - Quality and traceability matter more than “chatty” UX
 
-### 2) 100% offline operation for client confidentiality
-PatentFlow is designed to run fully locally:
-- Local LLM execution (air-gapped capable)
-- No external SaaS dependencies required for core workflows
+### 2) Privacy-aware hybrid operation for client confidentiality
+PatentFlow supports both local and online inference paths:
+- Sensitive files and privacy-mode requests can be routed to Local LLM or a controlled Pioneer by Fastino endpoint
+- Non-sensitive tasks can use configured online OpenAI-compatible APIs such as OpenAI, OpenRouter, r9s.ai, or vLLM-compatible services
 - Local persistence for attorney-specific preferences
 
 ### 3) Enterprise UX: minimal, information-dense, institutional
@@ -76,8 +76,11 @@ graph TD
         EPO[EPO API] -->|Prior Art Retrieval| API
     end
 
-    subgraph AI [Local AI Runtime]
-        Skills --> LLM[(Local LLM)]
+    subgraph AI [AI Runtime & Model Routing]
+        Skills --> Router[Privacy / Sensitivity Router]
+        Router -->|Sensitive files or Privacy Mode| LocalLLM[(Local LLM)]
+        Router -->|Non-sensitive tasks| OnlineAPI[(Online LLM API<br/>OpenAI-compatible)]
+        Router -->|Optional trained route| Fastino[(Pioneer by Fastino<br/>PatentFlow Attorney Model)]
     end
 ```
 
@@ -268,9 +271,10 @@ Notes:
 ---
 
 ## Security & Privacy Posture
-- Designed for offline and air-gapped operation
+- Privacy-aware routing: sensitive files and privacy-mode requests can be routed away from general online APIs
 - Local persistence only (SQLite)
-- No dependency on third-party analytics, telemetry, or cloud inference for core workflows
+- No dependency on third-party analytics or telemetry
+- Online inference is explicit and configurable for non-sensitive tasks through OpenAI-compatible APIs
 - Voice sessions are ephemeral: no audio retention, transcription, or logging
 - Pioneer by Fastino privacy mode routes supported analysis through the configured Pioneer endpoint with fallback to the existing route
 
