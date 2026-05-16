@@ -18,6 +18,9 @@ dist/
 *.egg-info/
 
 .DS_Store
+Icon?
+**/Icon?
+.voice-venv/
 
 .vscode/
 .idea/

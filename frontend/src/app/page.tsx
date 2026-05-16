@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UploadCloud, FileText, Zap, Download, ChevronRight, Sparkles, Shield, BarChart3, Languages, FileEdit, X, Radio } from "lucide-react";
+import { UploadCloud, FileText, Zap, Download, ChevronRight, Sparkles, Shield, BarChart3, Languages, FileEdit, X, Radio, Mic2, PhoneCall, Loader2 } from "lucide-react";
 
 type TaskState = "PENDING" | "STARTED" | "PROGRESS" | "SUCCESS" | "FAILURE";
 
@@ -171,10 +171,263 @@ export default function Workspace() {
   const officeActionInputRef = useRef<HTMLInputElement>(null);
   const specificationInputRef = useRef<HTMLInputElement>(null);
 
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+  const VOICE_SERVER = process.env.NEXT_PUBLIC_VOICE_SERVER_URL || "http://localhost:7860";
+  const API_KEY = process.env.NEXT_PUBLIC_PATENTFLOW_API_KEY || "";
+  const apiHeaders = (extra: Record<string, string> = {}) => (
+    API_KEY ? { ...extra, "X-API-Key": API_KEY } : extra
+  );
+
+  const [voiceStarting, setVoiceStarting] = useState(false);
+  const [voiceEnding, setVoiceEnding] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [voiceSessionId, setVoiceSessionId] = useState<string | null>(null);
+  const [voiceStatus, setVoiceStatus] = useState<string>("");
+  const voiceWsRef = useRef<WebSocket | null>(null);
+  const voicePlayerRef = useRef<{ stop: () => void; handleMessage: (data: unknown) => void } | null>(null);
+  const voiceStartSentRef = useRef(false);
+
+  const voiceRuntimeWindow = () => window as typeof window & {
+    SyncedAudioPlayer?: new (options: Record<string, unknown>) => { start: () => Promise<void>; stop: () => void; handleMessage: (data: unknown) => void };
+    __pcmOutput?: boolean;
+    __patentFlowVoiceScripts?: Promise<void>;
+  };
+
+  const loadVoiceScript = (src: string) => new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      resolve();
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = false;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`Failed to load voice runtime: ${src}`));
+    document.body.appendChild(script);
+  });
+
+  const ensureVoiceRuntime = async () => {
+    const runtime = voiceRuntimeWindow();
+    if (!runtime.__patentFlowVoiceScripts) {
+      runtime.__patentFlowVoiceScripts = (async () => {
+        await loadVoiceScript(`/voice-runtime/opus-encoder.js`);
+        await loadVoiceScript(`/voice-runtime/audio-processor.js`);
+        await loadVoiceScript(`/voice-runtime/synced-audio-player.js`);
+        const audioConfigResp = await fetch(`${VOICE_SERVER.replace(/\/$/, "")}/api/audio-config`);
+        const audioConfig = await audioConfigResp.json();
+        runtime.__pcmOutput = Boolean(audioConfig?.pcm);
+      })();
+    }
+    await runtime.__patentFlowVoiceScripts;
+    if (!runtime.SyncedAudioPlayer) {
+      throw new Error("Voice runtime loaded, but SyncedAudioPlayer is unavailable.");
+    }
+    return runtime;
+  };
+
+  const closeVoiceResources = () => {
+    voiceStartSentRef.current = false;
+    const ws = voiceWsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: "stop" }));
+      ws.close();
+    } else if (ws && ws.readyState === WebSocket.CONNECTING) {
+      ws.close();
+    }
+    voiceWsRef.current = null;
+    if (voicePlayerRef.current) {
+      voicePlayerRef.current.stop();
+      voicePlayerRef.current = null;
+    }
+  };
+
+  const handleStartVoice = async () => {
+    setVoiceStarting(true);
+    setVoiceError(null);
+    setVoiceStatus("Starting audio session");
+    voiceStartSentRef.current = false;
+
+    try {
+      const activeClaimChart = (result?.claim_chart || []).slice(0, 12).map((row, idx) => ({
+        id: row.feature_id || String(idx + 1),
+        limitation: row.claim_limitation || row.limitation || "",
+        disclosure: row.prior_art_mapping || row.d1_disclosure || row.disclosure || row.d1_mapping || "",
+        assessment: row.status || row.assessment || "",
+        remarks: row.attorney_remarks || row.remarks || "",
+      }));
+
+      const resp = await fetch(`${VOICE_SERVER}/start_bot`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: "patentflow-web",
+          attorney_profile: attorneyProfile,
+          attorney_name: resolvedAttorneyName,
+          examiner_preference: examinerBias,
+          claim_type: claimType,
+          office_action_text: officeActionText.slice(0, 18000),
+          specification_text: specificationText.slice(0, 18000),
+          task_id: taskId,
+          task_state: taskState,
+          latest_result: result
+            ? {
+                status: result.status,
+                cited_docs: result.cited_docs || [],
+                claim_chart: activeClaimChart,
+                translation_rows: (result.translation_rows || []).slice(0, 20),
+                response_draft: (result.response_draft || "").slice(0, 8000),
+              }
+            : null,
+        }),
+      });
+
+      const rawText = await resp.text();
+      let data: Record<string, unknown> = {};
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText) as Record<string, unknown>;
+        } catch {
+          data = { message: rawText };
+        }
+      }
+
+      if (!resp.ok) {
+        throw new Error(
+          typeof data.error === "string"
+            ? data.error
+            : typeof data.detail === "string"
+              ? data.detail
+              : `Voice server returned HTTP ${resp.status}`
+        );
+      }
+
+      const sessionId = typeof data.session_id === "string" ? data.session_id : "";
+
+      if (!sessionId) {
+        throw new Error("Voice server responded without a session id.");
+      }
+
+      setVoiceStatus("Loading voice runtime");
+      const runtime = await ensureVoiceRuntime();
+
+      setVoiceStatus("Requesting microphone access");
+      const voicesResp = await fetch(`${VOICE_SERVER}/api/voices`);
+      const voicesData = await voicesResp.json();
+      const firstVoice = Array.isArray(voicesData?.voices) ? voicesData.voices[0] : null;
+      const voiceName = firstVoice?.name || "unknow";
+      const voiceId = firstVoice?.voice_id || "";
+      const voiceLang = firstVoice?.language || "en";
+
+      const promptResp = await fetch(`${VOICE_SERVER}/context/${encodeURIComponent(sessionId)}`);
+      const promptData = promptResp.ok ? await promptResp.json() : {};
+      const patentflowPrompt = typeof promptData?.prompt === "string" ? promptData.prompt : undefined;
+
+      const PlayerCtor = runtime.SyncedAudioPlayer;
+      if (!PlayerCtor) {
+        throw new Error("Voice runtime is unavailable.");
+      }
+      const player = new PlayerCtor({
+        basePath: `/voice-runtime`,
+        sampleRate: 24000,
+        pcmOutput: runtime.__pcmOutput || false,
+        echoCancellation: true,
+        onEncodedAudio: (opusData: ArrayBuffer | Blob | Uint8Array) => {
+          const currentWs = voiceWsRef.current;
+          if (voiceStartSentRef.current && currentWs && currentWs.readyState === WebSocket.OPEN) {
+            currentWs.send(opusData);
+          }
+        },
+        onText: ({ text, isUser }: { text?: string; isUser?: boolean }) => {
+          if (!text) return;
+          setVoiceStatus(isUser ? "Listening" : "Assistant responding");
+        },
+        onEvent: (eventType: string) => {
+          if (eventType === "demo_mode") setVoiceStatus("Voice demo mode");
+        },
+        onError: (error: Error) => {
+          setVoiceError(error.message);
+          setVoiceStatus("Voice error");
+        },
+      });
+      voicePlayerRef.current = player;
+      await player.start();
+
+      const voiceServerUrl = new URL(VOICE_SERVER);
+      const wsProtocol = voiceServerUrl.protocol === "https:" ? "wss:" : "ws:";
+      const ws = new WebSocket(`${wsProtocol}//${voiceServerUrl.host}/ws/chat`);
+      voiceWsRef.current = ws;
+
+      await new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error("Voice websocket connection timed out.")), 15000);
+        ws.onmessage = (event) => voicePlayerRef.current?.handleMessage(event.data);
+        ws.onclose = () => {
+          voiceWsRef.current = null;
+          setVoiceStatus((current) => current === "Listening" ? "Voice disconnected" : current);
+        };
+        ws.onopen = () => {
+          window.clearTimeout(timeout);
+          ws.send(JSON.stringify({
+            type: "start",
+            voice_name: voiceName,
+            voice_id: voiceId,
+            language: voiceLang,
+            prompt: patentflowPrompt,
+          }));
+          voiceStartSentRef.current = true;
+          resolve();
+        };
+        ws.onerror = () => {
+          window.clearTimeout(timeout);
+          reject(new Error("Voice websocket connection error."));
+        };
+      });
+
+      setVoiceSessionId(sessionId);
+      setVoiceStatus("Listening");
+    } catch (err) {
+      closeVoiceResources();
+      setVoiceSessionId(null);
+      setVoiceStatus("Voice failed");
+      const message = err instanceof Error ? err.message : String(err);
+      setVoiceError(
+        /permission denied|notallowederror|microphone/i.test(message)
+          ? "Microphone permission is required to start the session. Allow microphone access for this page and try again."
+          : message
+      );
+    } finally {
+      setVoiceStarting(false);
+    }
+  };
+
+  const handleEndVoice = async () => {
+    if (!voiceSessionId) return;
+    setVoiceEnding(true);
+    setVoiceError(null);
+    setVoiceStatus("Ending voice session");
+
+    try {
+      closeVoiceResources();
+      await fetch(`${VOICE_SERVER}/end_session/${encodeURIComponent(voiceSessionId)}`, {
+        method: "POST",
+      });
+      setVoiceSessionId(null);
+      setVoiceStatus("");
+    } catch (err) {
+      setVoiceError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setVoiceEnding(false);
+    }
+  };
+
   const uploadFile = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append("file", file);
-    const resp = await fetch(`${API_BASE}/api/upload`, { method: "POST", body: formData });
+    const resp = await fetch(`${API_BASE}/api/upload`, {
+      method: "POST",
+      headers: apiHeaders(),
+      body: formData,
+    });
     const data = await resp.json();
     if (data.status !== "success") throw new Error(data.error || "Upload failed");
     return data.text as string;
@@ -210,8 +463,6 @@ export default function Workspace() {
     }
   };
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-
   const resolvedAttorneyName = attorneyProfile === "Default" ? "" : attorneyProfile;
 
   const handleSaveMemory = async () => {
@@ -233,7 +484,7 @@ export default function Workspace() {
     try {
       const resp = await fetch(`${API_BASE}/api/memory/${encodeURIComponent(resolvedAttorneyName)}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: apiHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(
           memoryKind === "phrasing_rule"
             ? { phrasing_rule: text }
@@ -271,7 +522,7 @@ export default function Workspace() {
     try {
       const resp = await fetch(`${API_BASE}/api/generate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: apiHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           office_action_text: officeActionText,
           specification_text: specificationText,
@@ -316,7 +567,7 @@ export default function Workspace() {
 
     const poll = async () => {
       try {
-        const resp = await fetch(`${API_BASE}/api/status/${taskId}`);
+        const resp = await fetch(`${API_BASE}/api/status/${taskId}`, { headers: apiHeaders() });
         if (!resp.ok) {
           const text = await resp.text();
           throw new Error(text || `HTTP ${resp.status}`);
@@ -644,6 +895,56 @@ export default function Workspace() {
               {isExecuting ? 'Processing Document...' : 'Execute Pipeline'}
               {!isExecuting && <ChevronRight className="w-4 h-4 ml-1 opacity-60 group-hover:translate-x-0.5 transition-transform" />}
             </Button>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm p-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                <Mic2 className="w-5 h-5 text-emerald-300" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white/90 mb-1">Voice Assistant</p>
+                <p className="text-xs text-white/35 leading-relaxed max-w-2xl">
+                  Starts or ends a PatentFlow voice session. Voice server: {VOICE_SERVER}
+                </p>
+                {voiceSessionId && (
+                  <p className="mt-2 inline-flex items-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100/90">
+                    Session active{voiceStatus ? ` · ${voiceStatus}` : ""}
+                  </p>
+                )}
+                {!voiceSessionId && voiceStatus && (
+                  <p className="mt-2 inline-flex items-center rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-xs text-white/55">
+                    {voiceStatus}
+                  </p>
+                )}
+                {voiceError && (
+                  <p className="mt-2 text-xs text-red-200/90 border border-red-500/20 bg-red-500/10 rounded-lg px-3 py-2">
+                    {voiceError}
+                  </p>
+                )}
+              </div>
+            </div>
+            {voiceSessionId ? (
+              <Button
+                onClick={handleEndVoice}
+                disabled={voiceEnding}
+                className="h-10 rounded-lg border border-red-500/25 bg-red-500/10 px-4 text-sm font-medium text-red-100 hover:bg-red-500/15 hover:border-red-500/40 transition-all"
+              >
+                {voiceEnding ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <X className="w-4 h-4 mr-2" />}
+                {voiceEnding ? "Ending the session" : "End the session"}
+              </Button>
+            ) : (
+              <Button
+                onClick={handleStartVoice}
+                disabled={voiceStarting}
+                className="h-10 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-4 text-sm font-medium text-emerald-100 hover:bg-emerald-500/15 hover:border-emerald-500/40 transition-all"
+              >
+                {voiceStarting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <PhoneCall className="w-4 h-4 mr-2" />}
+                {voiceStarting ? "Starting the session" : "Start the session"}
+              </Button>
+            )}
           </div>
         </div>
       </section>

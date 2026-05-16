@@ -19,6 +19,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
+    env_file:
+      - .env
     environment:
       - REDIS_URL=redis://redis:6379/0
     networks:
@@ -47,6 +49,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.worker
+    env_file:
+      - .env
     environment:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_CONCURRENCY=1
@@ -63,7 +67,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+        NEXT_PUBLIC_PATENTFLOW_API_KEY: ${NEXT_PUBLIC_PATENTFLOW_API_KEY:-}
+        NEXT_PUBLIC_VOICE_SERVER_URL: ${NEXT_PUBLIC_VOICE_SERVER_URL:-http://localhost:7860}
     networks:
       - patentflow-net
     ports:

@@ -88,15 +88,18 @@ async def api_key_auth(request, call_next):
 
 
 def _allowed_origins() -> List[str]:
-    raw = os.getenv("ALLOWED_ORIGINS", "").strip()
-    if raw:
-        origins = [o.strip() for o in raw.split(",") if o.strip()]
-        if origins:
-            return origins
-    return [
+    defaults = [
         "http://localhost:3000",
         "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
     ]
+    raw = os.getenv("ALLOWED_ORIGINS", "").strip()
+    origins = [o.strip() for o in raw.split(",") if o.strip()] if raw else []
+    for origin in defaults:
+        if origin not in origins:
+            origins.append(origin)
+    return origins
 
 
 def _json_size_bytes(obj: Any) -> int:

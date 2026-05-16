@@ -1,0 +1,7 @@
+# PatentFlow Voice Server dependencies
+# Active implementation: voice_pipeline/server.py (Gradbot + Gradium)
+
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-dotenv>=1.0.0
+gradbot
