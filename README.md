@@ -1,201 +1,232 @@
-# ⚖️ PatentFlow — Offline Agentic Patent Prosecution Workspace
+# PatentFlow
 
-![UI: Next.js](https://img.shields.io/badge/UI-Next.js-black)
-![API: FastAPI](https://img.shields.io/badge/API-FastAPI-009688)
-![Queue: Celery](https://img.shields.io/badge/Queue-Celery-37814A)
-![Broker: Redis](https://img.shields.io/badge/Broker-Redis-DC382D)
-![Memory: SQLite](https://img.shields.io/badge/Memory-SQLite-003B57)
-![LLM: Local](https://img.shields.io/badge/LLM-Local%20LLM-6B7280)
+Privacy-first patent prosecution workspace for European patent attorneys.
 
-**PatentFlow** is an enterprise-grade, privacy-first Document Processing Workspace designed for **European Patent Attorneys**. It targets the realities of prosecution work:
+PatentFlow is a full-stack document processing system for Office Action analysis, claim-chart generation, translation risk review, attorney memory, and response drafting. It is designed for professional patent prosecution workflows where confidentiality, traceability, and structured legal reasoning matter more than generic chat output.
 
-- **Art. 123(2) EPC** risk (added matter) where wording choices can be fatal
-- **Art. 56 EPC** inventive-step mapping where semantic interpretation matters
-- **Client confidentiality** where “cloud by default” is not acceptable
+## Key Use Cases
 
-Built by an IP professional, for IP professionals.
+- EPO Office Action analysis for Art. 56 EPC inventive-step objections
+- Feature-by-feature claim chart generation against cited prior art
+- Art. 123(2) EPC translation and terminology risk review
+- Attorney preference memory for firm-specific drafting style and examiner strategy
+- Draft response skeletons for attorney review
+- Optional real-time voice session for attorney-in-the-loop analysis
+- Optional Fastino Pioneer privacy mode for local or controlled inference routing
 
----
+## Product Positioning
 
-## Why PatentFlow
+PatentFlow is not a general-purpose chatbot. It is a prosecution workspace that converts unstructured patent documents into structured, reviewable attorney work product.
 
-### 1) Legal accuracy under institutional constraints
-Patent prosecution is not “generic writing.” It is **risk management**:
-- A single phrasing shift can trigger an Art. 123(2) issue
-- Inventive-step reasoning requires structured, repeatable mapping
-- Quality and traceability matter more than “chatty” UX
+Primary design goals:
 
-### 2) 100% offline operation for client confidentiality
-PatentFlow is designed to run fully locally:
-- Local LLM execution (air-gapped capable)
-- No external SaaS dependencies required for core workflows
-- Local persistence for attorney-specific preferences
+- Confidential by default: local persistence, no analytics layer, controlled model routing
+- Structured output: claim charts, verification rows, and draft sections instead of free-form answers
+- Attorney reviewability: every generated artifact is intended for human legal review
+- Operational pragmatism: FastAPI, Celery, Redis, and a static Next.js frontend for local deployment
 
-### 3) Enterprise UX: minimal, information-dense, institutional
-The UI follows a **Bloomberg Terminal-style** aesthetic:
-- High signal density
-- Subtle controls
-- Low-friction review of structured outputs
-
----
-
-## Trade Secret / Black Box Disclaimer (Intentional)
-Specific system prompts, proprietary dictionaries, and heuristic parsing algorithms are **intentionally omitted** from this public repository to protect intellectual property.
-
-PatentFlow exposes stable interfaces and deterministic boundaries while keeping core prompt logic and proprietary linguistic assets internal.
-
----
-
-## System Architecture (High-Level)
+## Architecture
 
 ```mermaid
-graph TD
-    subgraph Frontend [Next.js Enterprise UI - Port 3000]
-        UI[Workspace Dashboard]
-        UI -->|POST /api/generate| API[FastAPI Gateway :8000]
-        UI -->|GET /api/status/:id| API
-        UI -->|GET/POST /api/memory/*| API
-        UI -->|Voice Controls| VoiceS[Voice Server :7860]
-    end
+flowchart TD
+    User[Patent Attorney] --> UI[Next.js Workspace UI<br/>Port 3000]
 
-    subgraph Voice [Gradbot Voice Pipeline - Port 7860]
-        VoiceS -->|STT → LLM → TTS| GradbotRT[Gradbot Runtime]
-        GradbotRT -->|LLM Calls| API
-    end
+    UI -->|Upload OA / Specification| UploadAPI[FastAPI Upload API<br/>/api/upload]
+    UI -->|Start Analysis| GenerateAPI[FastAPI Generate API<br/>/api/generate]
+    UI -->|Poll Status| StatusAPI[FastAPI Status API<br/>/api/status/:task_id]
+    UI -->|Memory CRUD| MemoryAPI[FastAPI Memory API<br/>/api/memory/*]
+    UI -->|Start / End Voice Session| VoiceServer[Gradbot Voice Server<br/>Port 7860]
 
-    subgraph Backend [FastAPI + Celery Workers]
-        API -->|Enqueue Tasks| Broker[(Redis Broker :6379)]
-        API -->|Fetch Results| BackendRedis[(Redis Result Backend)]
-        Broker -->|Consume| Worker[Celery Worker]
+    GenerateAPI --> Queue[Redis Broker<br/>Port 6379]
+    Queue --> Worker[Celery Worker]
 
-        Worker --> Skills[Skills Interface]
-        SQLite[(Local Profile DB)] --> Skills
-    end
+    Worker --> Parse[Document Parsing<br/>PDF / DOCX / TXT]
+    Parse --> Chart[Claim Chart Generator<br/>Art. 56 EPC]
+    Parse --> Verify[Translation / Terminology Verifier<br/>Art. 123(2) EPC]
+    Chart --> Draft[Response Draft Builder]
+    Verify --> Draft
+    Draft --> ResultStore[Redis Result Backend]
+    ResultStore --> StatusAPI
 
-    subgraph External [Optional Data Sources]
-        EPO[EPO API] -->|Prior Art Retrieval| API
-    end
+    MemoryAPI --> MemoryDB[(SQLite Attorney Memory)]
+    MemoryDB --> Chart
+    MemoryDB --> Draft
 
-    subgraph AI [Local AI Runtime]
-        Skills --> LLM[(Local LLM)]
-    end
+    GenerateAPI --> EPO[EPO OPS / Register APIs<br/>Optional prior-art ingestion]
+    EPO --> Parse
+
+    Chart --> Router[Model Router]
+    Verify --> Router
+    Draft --> Router
+
+    Router -->|Default local-sensitive route| LocalLLM[Local / OpenAI-compatible LLM]
+    Router -->|Optional privacy mode| Fastino[Fastino Pioneer<br/>Fine-tuned PatentFlow Attorney Model]
+    Router -->|Fallback / public workflow| CloudLLM[Configured Cloud LLM]
+
+    VoiceServer -->|STT -> LLM -> TTS| VoiceRuntime[Gradbot Runtime]
+    VoiceRuntime --> Router
 ```
 
----
+## System Components
 
-## Core Capabilities
+- Frontend: Next.js static workspace UI
+- API: FastAPI service for uploads, job submission, status polling, memory, EPO ingestion, and translation verification
+- Worker: Celery pipeline for parsing, claim-chart generation, verification, and response drafting
+- Broker and result backend: Redis
+- Local memory: SQLite-backed attorney preference store
+- Voice service: Gradbot-based voice runtime exposed separately on port 7860
+- Model routing: OpenAI-compatible local/cloud engines with optional Fastino Pioneer privacy-mode routing
 
-### 1) Art. 56 Claim Chart Generation (LLM-Assisted, Structured Output)
-Generate an attorney-reviewable claim chart with:
-- Feature-by-feature claim splitting
-- Prior art excerpt anchoring (D1/D2)
-- LLM semantic assessment:
-  - `Yes` / `No` / `Partial`
-  - reasoning captured per row for auditability
+## Core Workflows
 
-### 2) Art. 123(2) Translation Verification (High-Risk Terminology Guardrails)
-A verification workflow designed to surface:
-- semantic mismatches
-- risky wording drift
-- institutional terminology consistency
+### 1. Office Action to Structured Work Product
 
-### 3) Dynamic Attorney Memory (Local Persistent Context Injection)
-PatentFlow supports a **Local User Preference Engine** that stores and recalls attorney preferences entirely offline:
+1. Upload an Office Action and patent specification.
+2. PatentFlow extracts text and identifies claim/prior-art context.
+3. The worker generates:
+   - Art. 56 claim chart
+   - Art. 123(2) terminology review
+   - attorney-reviewable draft response
+4. The frontend polls task status and renders the structured result.
 
-- **SQLite-backed memory** (zero external dependencies)
-- Profile-specific preferences persisted across sessions
-- Preferences are dynamically injected into the LLM system context at runtime
+### 2. Claim Chart Generation
 
-**Business value**
-- Enforces firm-wide house style and attorney-specific drafting habits
-- Reduces “micro-friction” edits and repeated preference corrections
-- Supports consistent examiner strategy posture across matters
+PatentFlow converts claims and cited prior art into reviewable rows:
 
-### 4) One-Click EPO Prior Art Ingestion
-PatentFlow integrates EPO retrieval to support:
-- automated ingestion of cited prior art (e.g., D1/D2 full text)
-- reduced manual copy/paste and document hunting
-- faster turnaround from Office Action to structured analysis
+- feature identifier
+- claim limitation
+- prior-art disclosure mapping
+- assessment: Yes / No / Partial
+- attorney remarks and reasoning
 
-**Business value**
-- Cuts administrative time
-- Increases completeness and consistency of cited-document context
-- Improves auditability of the evidence basis used in analysis
+The chart is designed as a first-pass prosecution work product, not a final legal conclusion.
 
-### 5) Real-Time Voice Interaction (Gradbot)
-PatentFlow includes a real-time voice session for attorney-in-the-loop workflows:
-- **Start the session** opens a browser-based voice channel to the PatentFlow engine
-- Discuss claim charts, examiner objections, and draft strategy conversationally
-- Voice pipeline uses Gradbot for streaming STT → LLM → TTS with sub-second latency
-- Session state is ephemeral; no audio stored or logged
+### 3. Translation and Terminology Review
 
-**Business value**
-- Reduces typing friction during document review
-- Enables rapid "talk through" of objection strategy before committing to text
-- Maintains client confidentiality: voice processing runs locally, no cloud transcription
+The verifier flags potential Art. 123(2) and terminology risks, including:
 
-### 6) Local Privacy Mode (Fastino Pioneer)
-For firms requiring zero third-party inference, PatentFlow supports an opt-in privacy mode:
-- Routes analysis through a locally fine-tuned PatentFlow attorney model via Fastino Pioneer
-- Toggle `ENABLE_LOCAL_PRIVACY_MODE=true` in `.env`
-- When disabled, existing online LLM paths operate unchanged
-- When enabled, all analysis calls use the local model; on failure, falls back gracefully
+- semantic drift between source and target text
+- ambiguous claim language
+- EPO style issues such as open-ended terms, unclear functional language, and risky wording shifts
 
-**Business value**
-- Meets strict client data policies without sacrificing core functionality
-- No architectural fork — same pipeline, privacy-aware routing
+### 4. Attorney Memory
 
----
+PatentFlow stores attorney or firm preferences locally and injects them into generation contexts. Typical examples:
 
-## Quick Start
+- preferred response tone
+- examiner-specific strategy notes
+- terminology and phrasing conventions
+- firm drafting preferences
 
-### Option A — Docker (recommended for reproducibility)
-1) Configure environment:
-- Copy `.env.example` → `.env`
-- Set `NEXT_PUBLIC_API_BASE_URL`, `REDIS_URL`, and LLM configuration as needed
+### 5. Voice Session
 
-2) Start services:
-```bash
-docker compose up --build
+The voice workflow is intentionally embedded in the main PatentFlow UI. It does not open a separate Gradium room, iframe, or external chat window.
+
+- `Start the session` initializes a voice context and requests microphone access
+- browser voice runtime connects to `ws://localhost:7860/ws/chat`
+- Gradbot handles streaming STT, model calls, and TTS
+- `End the session` closes the websocket, stops audio resources, and clears server-side context
+
+Worker and AudioWorklet assets are served same-origin from the frontend under `/voice-runtime/` to avoid browser Worker cross-origin restrictions.
+
+### 6. Fastino Pioneer Privacy Mode
+
+Fastino integration is opt-in and non-invasive.
+
+- Default mode preserves the existing public or online LLM workflow
+- Privacy mode routes supported analysis calls through a Fastino Pioneer model
+- If Fastino is unavailable, times out, or returns invalid JSON, the router logs the failure and falls back to the existing route
+- Secrets remain local and must not be committed
+
+Relevant environment variables:
+
+```env
+ENABLE_LOCAL_PRIVACY_MODE=false
+FASTINO_API_KEY=
+FASTINO_BASE_URL=https://api.pioneer.ai/v1
+FASTINO_MODEL_ID=59d36fbf-6e40-4e07-96d5-617d321842e8
 ```
 
-Typical services:
-- `frontend` (Next.js UI)
-- `api` (FastAPI gateway)
-- `redis` (broker + result backend)
-- `worker` (Celery worker, local LLM calls)
+## API Overview
 
-### Option B — Manual (local development)
+### Core API
 
-#### 1) Backend (FastAPI)
+- `GET /health`
+  - Service health check
+- `POST /api/upload`
+  - Extract text from PDF, DOCX, or TXT uploads
+- `POST /api/generate`
+  - Enqueue the full prosecution pipeline
+- `GET /api/status/{task_id}`
+  - Retrieve queue state, progress metadata, and final result
+- `POST /api/generate-chart`
+  - Generate a claim chart directly
+- `POST /api/verify-translation`
+  - Run translation or terminology verification directly
+
+### Memory API
+
+- `GET /api/memory/{attorney_id}`
+- `POST /api/memory/{attorney_id}`
+- `POST /api/memory/add`
+
+### EPO Integration
+
+- `POST /api/epo/ingest`
+  - Optional EPO OPS / Register ingestion path
+
+### Voice API
+
+- `GET /health` on the voice server
+- `POST /start_bot`
+- `POST /end_session/{session_id}`
+- `WS /ws/chat`
+
+## Local Development
+
+### 1. Environment
+
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+cp .env.example .env
+```
+
+Configure Redis, API base URL, model routing, and optional EPO/Fastino credentials in `.env`.
+
+Do not commit `.env` or real API keys.
+
+### 2. Backend API
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-
-export REDIS_URL=redis://localhost:6379/0
-uvicorn src.api:app --host 0.0.0.0 --port 8000
+uvicorn src.api:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-#### 2) Redis
+### 3. Redis
+
 ```bash
 redis-server
 ```
 
-#### 3) Celery Worker
+### 4. Celery Worker
+
 ```bash
-export REDIS_URL=redis://localhost:6379/0
+source .venv/bin/activate
 celery -A src.celery_app.celery_app worker -l info --concurrency=1 --prefetch-multiplier=1
 ```
 
-#### 4) Frontend (Next.js)
+### 5. Frontend
+
 ```bash
 cd frontend
 npm install
-npm run dev
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run build
+python3 -m http.server 3000 --bind 0.0.0.0 --directory out
 ```
 
-#### 5) Voice Server (Gradbot)
+### 6. Voice Server
+
 ```bash
 python3 -m venv .voice-venv
 source .voice-venv/bin/activate
@@ -203,60 +234,74 @@ pip install -r voice_pipeline/requirements.txt
 python -m voice_pipeline.server
 ```
 
-Open:
-- UI: `http://localhost:3000`
-- API: `http://localhost:8000/health`
+Open the workspace at:
 
----
+```text
+http://localhost:3000
+```
 
-## API Overview (Selected)
-- `POST /api/generate`
-  - Runs the async pipeline (Celery) for claim chart + verification + draft outputs
-- `GET /api/status/{task_id}`
-  - Poll for progress and results
-- `GET /api/memory/{attorney_id}`
-  - Retrieve stored preference string
-- `POST /api/memory/add`
-  - Append a new preference rule for an attorney profile
-- `POST /api/generate-chart`
-  - Deterministic + LLM-assisted chart generation with optional `attorney_id`
+## Docker Development
 
-### Voice Session Endpoints
-- `POST /start_bot`
-  - Initialize a voice session with attorney context prompt; returns `session_id` + WebSocket endpoint
-- `POST /end_session/{session_id}`
-  - Terminate voice session and release server-side resources
-- `WS /ws/chat`
-  - Bidirectional streaming channel for voice interaction
+```bash
+docker compose config
+docker compose build
+docker compose up
+```
 
----
+The default compose topology includes:
 
-## Security & Privacy Posture
-- Designed for offline and air-gapped operation
-- Local persistence only (SQLite)
-- No dependency on third-party analytics, telemetry, or cloud inference for core workflows
-- Voice sessions are ephemeral: no audio retention, transcription, or logging
-- Fastino Pioneer privacy mode routes all inference locally — zero data leaves the firm's environment
+- frontend
+- api
+- redis
+- worker
 
----
+Confirm host port availability before starting compose services.
 
-## Roadmap (Prioritized for Firm Integration)
+## Verification Checklist
 
-- [ ] **RAG with ChromaDB (Depth)**  
-  Local retrieval over firm-approved corpora (e.g., standards, prior OA templates) to improve long-document reasoning while controlling hallucination risk.
+Before presenting the workspace as ready:
 
-- [ ] **.docx Export Workflow (Adoption)**  
-  Export claim charts and drafted responses into Word with firm formatting and review conventions.
+```bash
+curl -sS http://localhost:8000/health
+redis-cli ping
+celery -A src.celery_app.celery_app inspect ping --timeout=3
+cd frontend && NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run build
+```
 
-- [ ] **SSE Streaming (UX)**  
-  Upgrade from polling to server-sent events for long-running generation, keeping the interface calm and traceable.
+For voice:
 
-- [ ] **Policy Packs (Governance)**  
-  Versioned preference bundles per firm/practice group to standardize style and examiner strategy guidance.
+```bash
+curl -sS http://localhost:7860/health
+curl -I http://localhost:3000/voice-runtime/decoderWorker.min.js
+```
 
----
+Expected outcomes:
 
-## License / Intended Use
-This repository is intended for professional evaluation and internal deployment patterns.
+- API health returns `PatentFlow Engine is online`
+- Redis returns `PONG`
+- Celery returns at least one online node
+- frontend build completes successfully
+- voice runtime assets are served from the frontend origin
 
-For production firm deployments, additional hardening (audit logs, access controls, document storage policies) is recommended.
+## Security and Privacy Notes
+
+- PatentFlow is designed for local-first deployment and controlled inference routing.
+- Uploaded documents are processed through the configured local stack.
+- Attorney memory is stored locally in SQLite.
+- Voice sessions are ephemeral and should not persist audio by default.
+- Fastino credentials and model keys must remain in `.env` or a secure local secret store.
+- Public repositories should omit proprietary prompts, private dictionaries, production client data, and model weights.
+
+## Repository Hygiene
+
+Do not commit:
+
+- `.env` or API keys
+- model weights or cache directories
+- local virtual environments
+- generated build artifacts unless explicitly required
+- client confidential documents or real Office Actions
+
+## Intended Use
+
+PatentFlow is intended for professional evaluation, internal prototyping, and controlled deployment patterns for patent prosecution workflows. Outputs require review by a qualified patent professional before use in any legal filing or client advice.
