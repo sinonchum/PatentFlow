@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import os
 import re
 import warnings
 from dataclasses import dataclass
@@ -7,9 +9,13 @@ from typing import Iterable, Optional, Sequence
 
 from .base import BaseLLM, Message
 from .cloud_engine import CloudEngine
+from .fastino_client import FastinoEngine, FastinoJSONParsingError
 from .local_engine import OllamaEngine
 from .mock_engine import MockEngine
 from src.memory_manager import LocalMemoryManager
+
+
+logger = logging.getLogger(__name__)
 
 
 _DEFAULT_SENSITIVE_PATTERNS = (
@@ -21,6 +27,7 @@ _DEFAULT_SENSITIVE_PATTERNS = (
 @dataclass
 class PatentRouter:
     is_sensitive: bool
+    use_privacy_mode: bool = False
     local_engine: Optional[OllamaEngine] = None
     cloud_engine: Optional[CloudEngine] = None
     mock_engine: Optional[MockEngine] = None
@@ -80,7 +87,56 @@ class PatentRouter:
         except Exception:
             return False
 
-    def route(self) -> BaseLLM:
+    def _privacy_mode_enabled(self) -> bool:
+        return self.use_privacy_mode or os.getenv("ENABLE_LOCAL_PRIVACY_MODE", "false").lower() == "true"
+
+    def _try_fastino(
+        self,
+        *,
+        task_type: str,
+        prompt: str,
+        messages: Optional[Sequence[Message]],
+        temperature: Optional[float],
+        max_tokens: Optional[int],
+        **kwargs: object,
+    ) -> Optional[str]:
+        """Attempt Fastino Pioneer inference. Returns result or None on failure."""
+        try:
+            fastino = FastinoEngine()
+        except RuntimeError as exc:
+            logger.warning("Fastino privacy mode enabled but engine unavailable: %s", exc)
+            return None
+
+        try:
+            return fastino.generate(
+                task_type=task_type,
+                prompt=prompt,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                **{k: v for k, v in kwargs.items() if k not in ("attorney_name",)},
+            )
+        except FastinoJSONParsingError as exc:
+            logger.error("Fastino returned invalid JSON for %s: %s — falling back", task_type, exc)
+            return None
+        except Exception as exc:
+            logger.error(
+                "Fastino inference failed for %s (%s): %s — falling back to existing route",
+                task_type,
+                type(exc).__name__,
+                exc,
+            )
+            return None
+
+    def route(self, *, include_privacy: bool = True) -> BaseLLM:
+        # --- Fastino Pioneer privacy-mode shadow routing ---
+        if include_privacy and self._privacy_mode_enabled():
+            try:
+                fastino = FastinoEngine()
+                return fastino
+            except RuntimeError as exc:
+                logger.warning("Fastino privacy mode enabled but unavailable: %s — falling back", exc)
+
         local = self.local_engine or OllamaEngine()
         cloud = self.cloud_engine or CloudEngine()
         mock = self.mock_engine or MockEngine()
@@ -134,8 +190,22 @@ class PatentRouter:
                         msgs.insert(0, {"role": "system", "content": injected})
                     messages = msgs
 
+        # --- Fastino Pioneer privacy-mode shadow routing ---
+        if self._privacy_mode_enabled():
+            fastino_result = self._try_fastino(
+                task_type=task_type,
+                prompt=prompt,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                **kwargs,
+            )
+            if fastino_result is not None:
+                return fastino_result
+            # Fall through to existing route on Fastino failure
+
         self._warn_if_mismatch(prompt, messages)
-        engine = self.route()
+        engine = self.route(include_privacy=False)
         return engine.generate(
             task_type=task_type,
             prompt=prompt,

@@ -145,6 +145,7 @@ export default function Workspace() {
   const [examinerBias, setExaminerBias] = useState("Jukka Tapaninen - Telecom");
   const [claimType, setClaimType] = useState("Method");
   const [attorneyProfile, setAttorneyProfile] = useState<"Default" | "Sinon" | "Karine">("Default");
+  const [usePrivacyMode, setUsePrivacyMode] = useState(false);
   const [showMemoryEditor, setShowMemoryEditor] = useState(false);
   const [memoryKind, setMemoryKind] = useState<"phrasing_rule" | "examiner_strategy">("phrasing_rule");
   const [memoryDraft, setMemoryDraft] = useState("");
@@ -529,6 +530,7 @@ export default function Workspace() {
           examiner_preference: examinerBias,
           claim_type: claimType,
           attorney_name: resolvedAttorneyName,
+          use_privacy_mode: usePrivacyMode,
         }),
       });
 
@@ -840,6 +842,39 @@ export default function Workspace() {
                     <SelectItem value="Product">Product</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setUsePrivacyMode((prev) => !prev)}
+                  className="w-full flex items-center justify-between rounded-lg border px-3 py-2 text-xs transition-all duration-200 hover:border-white/20"
+                  style={{
+                    borderColor: usePrivacyMode ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.08)",
+                    background: usePrivacyMode ? "rgba(16,185,129,0.06)" : "rgba(255,255,255,0.02)",
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <Shield className={`w-3.5 h-3.5 ${usePrivacyMode ? "text-emerald-400" : "text-white/25"}`} />
+                    <span className={`font-medium ${usePrivacyMode ? "text-emerald-100" : "text-white/30"}`}>
+                      Privacy Mode (Local LLM)
+                    </span>
+                  </div>
+                  <div
+                    className={`w-8 h-4 rounded-full transition-colors duration-200 ${
+                      usePrivacyMode ? "bg-emerald-500/60" : "bg-white/[0.08]"
+                    }`}
+                  >
+                    <div
+                      className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                        usePrivacyMode ? "translate-x-4" : "translate-x-0.5"
+                      }`}
+                      style={{ marginTop: "1px" }}
+                    />
+                  </div>
+                </button>
+                <p className="mt-1 text-[10px] text-white/20">
+                  {usePrivacyMode ? "Fastino Pioneer route active" : "Online LLM routing active"}
+                </p>
               </div>
             </div>
           </div>

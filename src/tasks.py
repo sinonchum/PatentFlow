@@ -16,10 +16,10 @@ from src.translator import PatentTranslator  # Keep for backward compat fallback
 
 
 # Legacy adapter functions for backward compatibility
-def generate_claim_chart(claim_text: str, prior_art_text: str, office_action_text: str = "") -> Dict[str, Any]:
+def generate_claim_chart(claim_text: str, prior_art_text: str, office_action_text: str = "", *, use_privacy_mode: bool = False) -> Dict[str, Any]:
     """Backward-compatible adapter using new ClaimChartGenerator skill."""
     from src.api import _get_llm_client
-    llm_client = _get_llm_client()
+    llm_client = _get_llm_client(use_privacy_mode=use_privacy_mode)
     generator = ClaimChartGenerator(llm_client=llm_client)
     result = generator.execute(
         claim_text=claim_text,
@@ -132,6 +132,7 @@ def parse_docs(
     claim_type: str = "Method",
     attorney_name: str = "",
     workflow_id: str = "",
+    use_privacy_mode: bool = False,
 ) -> Dict[str, Any]:
     _set_workflow_meta(workflow_id, "Parsing Office Action", _progress_fields(1))
     time.sleep(0.1)
@@ -221,6 +222,7 @@ def parse_docs(
         "cn_text": cn_text,
         "examiner_preference": examiner_preference,
         "claim_type": claim_type,
+        "use_privacy_mode": use_privacy_mode,
     }
 
 
@@ -388,6 +390,7 @@ def chart_and_verify(context: Dict[str, Any]) -> Dict[str, Any]:
         str(context.get("claim_text", "")),
         str(context.get("prior_art_text", "")),
         office_action_text=str(context.get("office_action_text", "")),
+        use_privacy_mode=bool(context.get("use_privacy_mode", False)),
     )
 
     # --- Step 2: terminology audit ---
@@ -659,6 +662,7 @@ def run_patentflow_generate(
     examiner_preference: str = "",
     claim_type: str = "Method",
     attorney_name: str = "",
+    use_privacy_mode: bool = False,
 ) -> Dict[str, Any]:
     """Orchestrate the generation pipeline using Celery chain + chord."""
     workflow_id = self.request.id
@@ -672,6 +676,7 @@ def run_patentflow_generate(
             claim_type=claim_type,
             attorney_name=attorney_name,
             workflow_id=workflow_id,
+            use_privacy_mode=use_privacy_mode,
         ),
         chunk_and_embed.s(),
         chart_and_verify.s(),

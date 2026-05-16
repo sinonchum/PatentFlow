@@ -45,16 +45,17 @@ class _LLMChatAdapter:
         )
 
 
-def _get_llm_client():
+def _get_llm_client(*, use_privacy_mode: bool = False):
     """Get an LLM client for skill usage, returns None if no engine available."""
     try:
-        router = PatentRouter(is_sensitive=True)
+        router = PatentRouter(is_sensitive=True, use_privacy_mode=use_privacy_mode)
+        # Probe the selected route once; keep the adapter on the router so Fastino
+        # runtime failures still use router-level fallback.
         engine = router.route()
-        # Check if it's a real engine (not mock)
         from src.engine.mock_engine import MockEngine
         if isinstance(engine, MockEngine):
             return None
-        return _LLMChatAdapter(engine)
+        return _LLMChatAdapter(router)
     except Exception:
         return None
 
@@ -123,6 +124,7 @@ class GenerateRequest(BaseModel):
     examiner_preference: str = Field(default="", description="Examiner preference bias label")
     claim_type: str = Field(default="Method", description="Claim category")
     attorney_name: str = Field(default="", description="Attorney identity for local preference memory")
+    use_privacy_mode: bool = Field(default=False, description="Route inference through Fastino Pioneer privacy mode")
 
 
 class GenerateResponse(BaseModel):
@@ -242,6 +244,7 @@ def generate(req: GenerateRequest) -> GenerateResponse:
         examiner_preference=req.examiner_preference,
         claim_type=req.claim_type,
         attorney_name=req.attorney_name,
+        use_privacy_mode=req.use_privacy_mode,
     )
 
     queue_position: Optional[int] = None

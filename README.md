@@ -134,16 +134,18 @@ PatentFlow includes a real-time voice session for attorney-in-the-loop workflows
 - Enables rapid "talk through" of objection strategy before committing to text
 - Maintains client confidentiality: voice processing runs locally, no cloud transcription
 
-### 6) Local Privacy Mode (Fastino Pioneer)
-For firms requiring zero third-party inference, PatentFlow supports an opt-in privacy mode:
-- Routes analysis through a locally fine-tuned PatentFlow attorney model via Fastino Pioneer
-- Toggle `ENABLE_LOCAL_PRIVACY_MODE=true` in `.env`
-- When disabled, existing online LLM paths operate unchanged
-- When enabled, all analysis calls use the local model; on failure, falls back gracefully
+### 6) Privacy Mode (Fastino Pioneer)
+PatentFlow supports an opt-in Fastino path for privacy-sensitive analysis:
+- Routes supported analysis through the configured Fastino Pioneer endpoint
+- Uses the fine-tuned PatentFlow attorney model configured by `FASTINO_MODEL_ID`
+- Toggle globally with `ENABLE_LOCAL_PRIVACY_MODE=true` in `.env`
+- Or toggle per request from the frontend with `Privacy Mode (Local LLM)`
+- When disabled, the existing LLM workflow operates unchanged
+- When enabled, Fastino is tried first; timeout, invalid JSON, or API failure falls back gracefully
 
 **Business value**
-- Meets strict client data policies without sacrificing core functionality
-- No architectural fork — same pipeline, privacy-aware routing
+- Adds privacy-aware routing without forking the pipeline
+- Preserves the existing public/online workflow by default
 
 ---
 
@@ -153,6 +155,7 @@ For firms requiring zero third-party inference, PatentFlow supports an opt-in pr
 1) Configure environment:
 - Copy `.env.example` → `.env`
 - Set `NEXT_PUBLIC_API_BASE_URL`, `REDIS_URL`, and LLM configuration as needed
+- For Fastino privacy mode, set `FASTINO_API_KEY`, `FASTINO_BASE_URL`, and `FASTINO_MODEL_ID`; leave `ENABLE_LOCAL_PRIVACY_MODE=false` unless you want Fastino as the default route
 
 2) Start services:
 ```bash
@@ -169,8 +172,8 @@ Typical services:
 
 #### 1) Backend (FastAPI)
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 
 export REDIS_URL=redis://localhost:6379/0
@@ -212,6 +215,7 @@ Open:
 ## API Overview (Selected)
 - `POST /api/generate`
   - Runs the async pipeline (Celery) for claim chart + verification + draft outputs
+  - Accepts optional `use_privacy_mode: true` to try Fastino Pioneer for this request
 - `GET /api/status/{task_id}`
   - Poll for progress and results
 - `GET /api/memory/{attorney_id}`
@@ -231,12 +235,29 @@ Open:
 
 ---
 
+## Fastino Configuration
+Add these values to `.env` when using Privacy Mode:
+
+```env
+ENABLE_LOCAL_PRIVACY_MODE=false
+FASTINO_API_KEY=
+FASTINO_BASE_URL=https://api.pioneer.ai/v1
+FASTINO_MODEL_ID=59d36fbf-6e40-4e07-96d5-617d321842e8
+```
+
+Notes:
+- `ENABLE_LOCAL_PRIVACY_MODE=false` keeps the existing route as default.
+- The frontend toggle sends `use_privacy_mode: true` for a single request.
+- Do not commit `FASTINO_API_KEY` or local `.env`.
+
+---
+
 ## Security & Privacy Posture
 - Designed for offline and air-gapped operation
 - Local persistence only (SQLite)
 - No dependency on third-party analytics, telemetry, or cloud inference for core workflows
 - Voice sessions are ephemeral: no audio retention, transcription, or logging
-- Fastino Pioneer privacy mode routes all inference locally — zero data leaves the firm's environment
+- Fastino Pioneer privacy mode routes supported analysis through the configured Fastino endpoint with fallback to the existing route
 
 ---
 
