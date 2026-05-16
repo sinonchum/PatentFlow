@@ -134,17 +134,30 @@ PatentFlow includes a real-time voice session for attorney-in-the-loop workflows
 - Enables rapid "talk through" of objection strategy before committing to text
 - Maintains client confidentiality: voice processing runs locally, no cloud transcription
 
-### 6) Privacy Mode (Fastino Pioneer)
-PatentFlow supports an opt-in Fastino path for privacy-sensitive analysis:
-- Routes supported analysis through the configured Fastino Pioneer endpoint
-- Uses the fine-tuned PatentFlow attorney model configured by `FASTINO_MODEL_ID`
+### 6) Privacy Mode (Pioneer by Fastino)
+PatentFlow includes an opt-in inference path powered by our own Pioneer by Fastino trained model for EPO prosecution work.
+
+**Trained model**
+- Platform: Pioneer by Fastino
+- Model Name: `PatentFlow-epo-patent-attorney-llama-3-1-8b`
+- Job ID / Model ID: `59d36fbf-6e40-4e07-96d5-617d321842e8`
+- Base URL: `https://api.pioneer.ai/v1`
+- Inference Endpoint: `https://api.pioneer.ai/v1/inference`
+
+**Why this model**
+- EPO-specific: trained for European patent attorney workflows, including Art. 56 inventive-step reasoning and Art. 123(2) added-matter risk review
+- Structured outputs: optimized for claim charts, objection extraction, severity labels, examiner reasoning, and recommended attorney actions
+- Domain tone: produces prosecution-oriented analysis instead of generic legal summaries
+- Privacy-aware routing: lets PatentFlow keep the default workflow unchanged while offering a dedicated controlled endpoint for sensitive patent analysis
+
+**How it is used**
 - Toggle globally with `ENABLE_LOCAL_PRIVACY_MODE=true` in `.env`
 - Or toggle per request from the frontend with `Privacy Mode (Local LLM)`
 - When disabled, the existing LLM workflow operates unchanged
-- When enabled, Fastino is tried first; timeout, invalid JSON, or API failure falls back gracefully
+- When enabled, Pioneer by Fastino is tried first; timeout, invalid JSON, or API failure falls back gracefully
 
 **Business value**
-- Adds privacy-aware routing without forking the pipeline
+- Adds patent-prosecution-specific model behavior without forking the pipeline
 - Preserves the existing public/online workflow by default
 
 ---
@@ -235,13 +248,15 @@ Open:
 
 ---
 
-## Fastino Configuration
+## Pioneer by Fastino Configuration
 Add these values to `.env` when using Privacy Mode:
 
 ```env
 ENABLE_LOCAL_PRIVACY_MODE=false
 FASTINO_API_KEY=
 FASTINO_BASE_URL=https://api.pioneer.ai/v1
+FASTINO_INFERENCE_ENDPOINT=https://api.pioneer.ai/v1/inference
+FASTINO_MODEL_NAME=PatentFlow-epo-patent-attorney-llama-3-1-8b
 FASTINO_MODEL_ID=59d36fbf-6e40-4e07-96d5-617d321842e8
 ```
 
@@ -257,7 +272,7 @@ Notes:
 - Local persistence only (SQLite)
 - No dependency on third-party analytics, telemetry, or cloud inference for core workflows
 - Voice sessions are ephemeral: no audio retention, transcription, or logging
-- Fastino Pioneer privacy mode routes supported analysis through the configured Fastino endpoint with fallback to the existing route
+- Pioneer by Fastino privacy mode routes supported analysis through the configured Pioneer endpoint with fallback to the existing route
 
 ---
 
