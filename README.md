@@ -146,6 +146,7 @@ PatentFlow includes an opt-in inference path powered by our own Pioneer by Fasti
 - Job ID / Model ID: `59d36fbf-6e40-4e07-96d5-617d321842e8`
 - Base URL: `https://api.pioneer.ai/v1`
 - Inference Endpoint: `https://api.pioneer.ai/v1/inference`
+- Training dataset: the curated fine-tuning dataset is included in the repository root as `dataset for training model for PatentFlow Attorney.jsonl`
 
 **Why this model**
 - EPO-specific: trained for European patent attorney workflows, including Art. 56 inventive-step reasoning and Art. 123(2) added-matter risk review
