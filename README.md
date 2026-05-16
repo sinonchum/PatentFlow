@@ -55,6 +55,12 @@ graph TD
         UI -->|POST /api/generate| API[FastAPI Gateway :8000]
         UI -->|GET /api/status/:id| API
         UI -->|GET/POST /api/memory/*| API
+        UI -->|Voice Controls| VoiceS[Voice Server :7860]
+    end
+
+    subgraph Voice [Gradbot Voice Pipeline - Port 7860]
+        VoiceS -->|STT → LLM → TTS| GradbotRT[Gradbot Runtime]
+        GradbotRT -->|LLM Calls| API
     end
 
     subgraph Backend [FastAPI + Celery Workers]
@@ -116,6 +122,29 @@ PatentFlow integrates EPO retrieval to support:
 - Increases completeness and consistency of cited-document context
 - Improves auditability of the evidence basis used in analysis
 
+### 5) Real-Time Voice Interaction (Gradbot)
+PatentFlow includes a real-time voice session for attorney-in-the-loop workflows:
+- **Start the session** opens a browser-based voice channel to the PatentFlow engine
+- Discuss claim charts, examiner objections, and draft strategy conversationally
+- Voice pipeline uses Gradbot for streaming STT → LLM → TTS with sub-second latency
+- Session state is ephemeral; no audio stored or logged
+
+**Business value**
+- Reduces typing friction during document review
+- Enables rapid "talk through" of objection strategy before committing to text
+- Maintains client confidentiality: voice processing runs locally, no cloud transcription
+
+### 6) Local Privacy Mode (Fastino Pioneer)
+For firms requiring zero third-party inference, PatentFlow supports an opt-in privacy mode:
+- Routes analysis through a locally fine-tuned PatentFlow attorney model via Fastino Pioneer
+- Toggle `ENABLE_LOCAL_PRIVACY_MODE=true` in `.env`
+- When disabled, existing online LLM paths operate unchanged
+- When enabled, all analysis calls use the local model; on failure, falls back gracefully
+
+**Business value**
+- Meets strict client data policies without sacrificing core functionality
+- No architectural fork — same pipeline, privacy-aware routing
+
 ---
 
 ## Quick Start
@@ -166,6 +195,14 @@ npm install
 npm run dev
 ```
 
+#### 5) Voice Server (Gradbot)
+```bash
+python3 -m venv .voice-venv
+source .voice-venv/bin/activate
+pip install -r voice_pipeline/requirements.txt
+python -m voice_pipeline.server
+```
+
 Open:
 - UI: `http://localhost:3000`
 - API: `http://localhost:8000/health`
@@ -184,12 +221,22 @@ Open:
 - `POST /api/generate-chart`
   - Deterministic + LLM-assisted chart generation with optional `attorney_id`
 
+### Voice Session Endpoints
+- `POST /start_bot`
+  - Initialize a voice session with attorney context prompt; returns `session_id` + WebSocket endpoint
+- `POST /end_session/{session_id}`
+  - Terminate voice session and release server-side resources
+- `WS /ws/chat`
+  - Bidirectional streaming channel for voice interaction
+
 ---
 
 ## Security & Privacy Posture
 - Designed for offline and air-gapped operation
 - Local persistence only (SQLite)
 - No dependency on third-party analytics, telemetry, or cloud inference for core workflows
+- Voice sessions are ephemeral: no audio retention, transcription, or logging
+- Fastino Pioneer privacy mode routes all inference locally — zero data leaves the firm's environment
 
 ---
 
