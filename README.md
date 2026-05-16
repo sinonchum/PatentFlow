@@ -283,6 +283,12 @@ Notes:
 
 ## Roadmap (Prioritized for Firm Integration)
 
+- [ ] **Two-Tier AI Architecture (Performance & UX)**  
+  Implement a dual-layer local inference pipeline using the Fastino platform to optimize both speed and compute efficiency for privacy-mode:
+  - **Layer 1 (Zero-Shot Triage):** Utilize GLiNER2 for ultra-fast, zero-shot entity extraction. Instantly highlight critical legal entities (e.g., Prior Art documents like D1/D2, disputed technical features, and statutory articles) directly in the UI milliseconds after document upload.
+  - **Layer 2 (Deep Legal Reasoning):** While the attorney engages with the instantly highlighted document, the fine-tuned local Llama-3.1-8B model asynchronously processes the complex Art. 56 / Art. 123(2) logic in the background via Celery.
+  This architecture provides immediate visual feedback to the attorney without blocking the UI or overloading the heavy LLM.
+
 - [ ] **RAG with ChromaDB (Depth)**  
   Local retrieval over firm-approved corpora (e.g., standards, prior OA templates) to improve long-document reasoning while controlling hallucination risk.
 
