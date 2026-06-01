@@ -131,6 +131,18 @@ graph TD
     end
 ```
 
+## Offline Fine-Tuned Model
+
+PatentFlow now includes a dedicated offline amendment-support model for privacy-aware prosecution workflows:
+
+- Hugging Face model: [`sinonchum/patentflow-qwen3-8b-amend-support`](https://huggingface.co/sinonchum/patentflow-qwen3-8b-amend-support)
+- Base model: `Qwen/Qwen3-8B`
+- Method: QLoRA adapter fine-tuning with 4-bit NF4 quantization
+- Task: classify whether supplied evidence supports a proposed amendment or support assertion
+- Output: structured JSON with support label, failure types, confidence, rationale, and attorney-review flag
+
+This model is designed for local or controlled-infrastructure deployment. It supports first-pass amendment support triage, helps surface missing elements or weak support chains, and routes uncertain cases to attorney review. It is a decision-support component, not a substitute for professional legal judgment.
+
 ## Environment Setup
 
 ### Prerequisites
