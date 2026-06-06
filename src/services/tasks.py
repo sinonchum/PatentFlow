@@ -1,5 +1,5 @@
 """
-PatentFlow EPO Celery Tasks
+ClaimPilot EPO Celery Tasks
 ============================
 Async pipeline for heavy EPO network operations.
 

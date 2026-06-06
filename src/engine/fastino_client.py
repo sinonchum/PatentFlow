@@ -26,7 +26,7 @@ class FastinoConfig:
 
 
 class FastinoEngine(BaseLLM):
-    """Isolated Fastino Pioneer client for privacy-mode PatentFlow analysis.
+    """Isolated Fastino Pioneer client for privacy-mode ClaimPilot analysis.
 
     Uses OpenAI-compatible chat completions via the Pioneer inference endpoint.
     Enforcing zero temperature for deterministic attorney outputs.

@@ -1,9 +1,9 @@
-PATENTFLOW — DEMO CASES
+CLAIMPILOT — DEMO CASES
 ========================
 Three realistic EPO prosecution cases for demonstration purposes.
 Each folder contains two files: specification.txt and office_action.txt.
 
-Upload BOTH files to PatentFlow (Office Action + Patent Specification),
+Upload BOTH files to ClaimPilot (Office Action + Patent Specification),
 then click Execute Pipeline to generate the claim chart, translation
 verifier, and response draft.
 

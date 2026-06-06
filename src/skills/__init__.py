@@ -1,4 +1,4 @@
-"""PatentFlow Agentic Skills Package.
+"""ClaimPilot Agentic Skills Package.
 
 This package contains deterministic, pydantic-validated skills for patent prosecution tasks.
 """

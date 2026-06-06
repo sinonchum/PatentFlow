@@ -10,7 +10,7 @@ def _redis_url() -> str:
 
 
 celery_app = Celery(
-    "patentflow",
+    "claimpilot",
     broker=_redis_url(),
     backend=_redis_url(),
     include=["src.tasks", "src.services.tasks"],

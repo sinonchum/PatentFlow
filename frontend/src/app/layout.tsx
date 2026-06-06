@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PatentFlow — Document Processing Workspace",
+  title: "ClaimPilot — Document Processing Workspace",
   description: "Enterprise-grade document processing for European Patent Attorneys. Local-first, secure, EPC compliant.",
 };
 

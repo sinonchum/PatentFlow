@@ -51,3 +51,4 @@ next-env.d.ts
 data/profiles.db
 data/profiles.db-shm
 data/profiles.db-wal
+.local-redis.db*

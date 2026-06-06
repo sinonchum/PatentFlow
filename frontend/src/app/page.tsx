@@ -174,7 +174,7 @@ export default function Workspace() {
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
   const VOICE_SERVER = process.env.NEXT_PUBLIC_VOICE_SERVER_URL || "http://localhost:7860";
-  const API_KEY = process.env.NEXT_PUBLIC_PATENTFLOW_API_KEY || "";
+  const API_KEY = process.env.NEXT_PUBLIC_CLAIMPILOT_API_KEY || "";
   const apiHeaders = (extra: Record<string, string> = {}) => (
     API_KEY ? { ...extra, "X-API-Key": API_KEY } : extra
   );
@@ -262,7 +262,7 @@ export default function Workspace() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          source: "patentflow-web",
+          source: "claimpilot-web",
           attorney_profile: attorneyProfile,
           attorney_name: resolvedAttorneyName,
           examiner_preference: examinerBias,
@@ -322,7 +322,7 @@ export default function Workspace() {
 
       const promptResp = await fetch(`${VOICE_SERVER}/context/${encodeURIComponent(sessionId)}`);
       const promptData = promptResp.ok ? await promptResp.json() : {};
-      const patentflowPrompt = typeof promptData?.prompt === "string" ? promptData.prompt : undefined;
+      const claimpilotPrompt = typeof promptData?.prompt === "string" ? promptData.prompt : undefined;
 
       const PlayerCtor = runtime.SyncedAudioPlayer;
       if (!PlayerCtor) {
@@ -373,7 +373,7 @@ export default function Workspace() {
             voice_name: voiceName,
             voice_id: voiceId,
             language: voiceLang,
-            prompt: patentflowPrompt,
+            prompt: claimpilotPrompt,
           }));
           voiceStartSentRef.current = true;
           resolve();
@@ -701,7 +701,7 @@ export default function Workspace() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
               <Zap className="w-4 h-4 text-white" />
             </div>
-            <span className="text-lg font-semibold tracking-tight">PatentFlow</span>
+            <span className="text-lg font-semibold tracking-tight">ClaimPilot</span>
             <span className="text-xs text-white/30 font-medium ml-1 hidden sm:inline">v2.0</span>
           </div>
           <div className="flex items-center gap-4">
@@ -942,7 +942,7 @@ export default function Workspace() {
               <div>
                 <p className="text-sm font-medium text-white/90 mb-1">Voice Assistant</p>
                 <p className="text-xs text-white/35 leading-relaxed max-w-2xl">
-                  Starts or ends a PatentFlow voice session. Voice server: {VOICE_SERVER}
+                  Starts or ends a ClaimPilot voice session. Voice server: {VOICE_SERVER}
                 </p>
                 {voiceSessionId && (
                   <p className="mt-2 inline-flex items-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100/90">
@@ -1323,7 +1323,7 @@ export default function Workspace() {
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-white/20">
             <Zap className="w-3.5 h-3.5" />
-            <span>PatentFlow — Offline-first · Secure · EPC Compliant</span>
+            <span>ClaimPilot — Offline-first · Secure · EPC Compliant</span>
           </div>
           <span className="text-xs text-white/15">© 2026</span>
         </div>

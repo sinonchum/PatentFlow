@@ -1,4 +1,4 @@
-# PatentFlow Voice Server dependencies
+# ClaimPilot Voice Server dependencies
 # Active implementation: voice_pipeline/server.py (Gradbot + Gradium)
 
 fastapi>=0.115.0

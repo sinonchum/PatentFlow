@@ -1,4 +1,4 @@
-"""PatentFlow voice server package.
+"""ClaimPilot voice server package.
 
 Active implementation: Gradbot + Gradium server in voice_pipeline.server.
 """

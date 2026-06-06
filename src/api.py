@@ -20,7 +20,7 @@ from src.memory_manager import LocalMemoryManager
 from src.services.epo_client import EPOClient
 from src.services.tasks import process_epo_request
 from src.skills import ClaimChartGenerator, TranslationVerifier
-from src.tasks import run_patentflow_generate
+from src.tasks import run_claimpilot_generate
 
 
 memory_db = LocalMemoryManager()
@@ -60,17 +60,17 @@ def _get_llm_client(*, use_privacy_mode: bool = False):
         return None
 
 
-app = FastAPI(title="PatentFlow API", version="0.1.0")
+app = FastAPI(title="ClaimPilot API", version="0.1.0")
 
 # --- API Key Authentication ---
-_PATENTFLOW_API_KEY = os.getenv("PATENTFLOW_API_KEY", "").strip()
+_CLAIMPILOT_API_KEY = os.getenv("CLAIMPILOT_API_KEY", "").strip()
 _PUBLIC_PATHS = {"/health", "/docs", "/openapi.json", "/redoc"}
 
 
 @app.middleware("http")
 async def api_key_auth(request, call_next):
-    """Require X-API-Key or Authorization: Bearer header when PATENTFLOW_API_KEY is set."""
-    if not _PATENTFLOW_API_KEY or request.url.path in _PUBLIC_PATHS:
+    """Require X-API-Key or Authorization: Bearer header when CLAIMPILOT_API_KEY is set."""
+    if not _CLAIMPILOT_API_KEY or request.url.path in _PUBLIC_PATHS:
         return await call_next(request)
 
     provided_key = request.headers.get("X-API-Key", "")
@@ -79,7 +79,7 @@ async def api_key_auth(request, call_next):
         if auth_header.lower().startswith("bearer "):
             provided_key = auth_header[7:].strip()
 
-    if provided_key != _PATENTFLOW_API_KEY:
+    if provided_key != _CLAIMPILOT_API_KEY:
         from fastapi.responses import JSONResponse
         return JSONResponse(
             status_code=401,
@@ -231,14 +231,14 @@ def _redis_client() -> redis.Redis:
     return _redis_singleton
 
 
-_QUEUE_KEY = "patentflow:queue:z"
-_QUEUE_SEQ_KEY = "patentflow:queue:seq"
-_WORKFLOW_META_KEY_PREFIX = "patentflow:taskmeta:"
+_QUEUE_KEY = "claimpilot:queue:z"
+_QUEUE_SEQ_KEY = "claimpilot:queue:seq"
+_WORKFLOW_META_KEY_PREFIX = "claimpilot:taskmeta:"
 
 @app.post("/api/generate", response_model=GenerateResponse)
 def generate(req: GenerateRequest) -> GenerateResponse:
     # Enqueue task and return immediately.
-    async_result = run_patentflow_generate.delay(
+    async_result = run_claimpilot_generate.delay(
         office_action_text=req.office_action_text,
         specification_text=req.specification_text,
         examiner_preference=req.examiner_preference,
@@ -615,7 +615,7 @@ async def global_exception_handler(request, exc):
     import logging
     from fastapi.responses import JSONResponse
 
-    logger = logging.getLogger("patentflow.api")
+    logger = logging.getLogger("claimpilot.api")
     logger.error("Unhandled exception on %s %s: %s", request.method, request.url.path, exc, exc_info=True)
 
     return JSONResponse(
@@ -631,4 +631,4 @@ async def global_exception_handler(request, exc):
 @app.get("/health")
 async def health_check():
     """Health check probe for monitoring and load balancers."""
-    return {"status": "PatentFlow Engine is online."}
+    return {"status": "ClaimPilot Engine is online."}

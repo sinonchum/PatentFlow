@@ -56,8 +56,8 @@ def _redis_client() -> redis.Redis:
     return redis.Redis.from_url(_redis_url(), decode_responses=True)
 
 
-_QUEUE_KEY = "patentflow:queue:z"
-_WORKFLOW_META_KEY_PREFIX = "patentflow:taskmeta:"
+_QUEUE_KEY = "claimpilot:queue:z"
+_WORKFLOW_META_KEY_PREFIX = "claimpilot:taskmeta:"
 _RESULT_BACKEND_MAX_BYTES = int(os.getenv("RESULT_BACKEND_MAX_BYTES", "262144"))
 _LARGE_PAYLOAD_KEYS = ("base64", "blob", "binary")
 _SUBSTEP_TOTAL = 5
@@ -235,7 +235,7 @@ def chunk_and_embed(context: Dict[str, Any]) -> Dict[str, Any]:
     # Placeholder cache marker for future real embedding pipeline.
     prior_art_text = str(context.get("prior_art_text", ""))
     prior_hash = hashlib.sha256(prior_art_text.encode("utf-8")).hexdigest()
-    cache_key = f"patentflow:embed:cache:{prior_hash}"
+    cache_key = f"claimpilot:embed:cache:{prior_hash}"
     cache_hit = False
     try:
         r = _redis_client()
@@ -654,7 +654,7 @@ def draft_response(combined: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @celery_app.task(bind=True, autoretry_for=(Exception,), max_retries=3, retry_backoff=True)
-def run_patentflow_generate(
+def run_claimpilot_generate(
     self,
     *,
     office_action_text: str = "",

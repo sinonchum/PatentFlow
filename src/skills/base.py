@@ -37,7 +37,7 @@ T = TypeVar('T', bound=SkillResult)
 
 class PatentAgentSkill(ABC, Generic[T]):
     """
-    Base class for all PatentFlow deterministic skills.
+    Base class for all ClaimPilot deterministic skills.
     Ensures every skill has a clear input/output boundary with pydantic validation.
     """
 

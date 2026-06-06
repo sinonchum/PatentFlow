@@ -1,4 +1,4 @@
-# ⚖️ PatentFlow — Offline Agentic Patent Prosecution Workspace
+# ⚖️ ClaimPilot — Offline Agentic Patent Prosecution Workspace
 
 ![UI: Next.js](https://img.shields.io/badge/UI-Next.js-black)
 ![API: FastAPI](https://img.shields.io/badge/API-FastAPI-009688)
@@ -7,7 +7,7 @@
 ![Memory: SQLite](https://img.shields.io/badge/Memory-SQLite-003B57)
 ![LLM: Local](https://img.shields.io/badge/LLM-Local%20LLM-6B7280)
 
-**PatentFlow** is an enterprise-grade, privacy-first Document Processing Workspace designed for **European Patent Attorneys**. It targets the realities of prosecution work:
+**ClaimPilot** is an enterprise-grade, privacy-first Document Processing Workspace designed for **European Patent Attorneys**. It targets the realities of prosecution work:
 
 - **Art. 123(2) EPC** risk (added matter) where wording choices can be fatal
 - **Art. 56 EPC** inventive-step mapping where semantic interpretation matters
@@ -17,7 +17,7 @@ Built by an IP professional, for IP professionals.
 
 ---
 
-## Why PatentFlow
+## Why ClaimPilot
 
 ### 1) Legal accuracy under institutional constraints
 Patent prosecution is not “generic writing.” It is **risk management**:
@@ -26,7 +26,7 @@ Patent prosecution is not “generic writing.” It is **risk management**:
 - Quality and traceability matter more than “chatty” UX
 
 ### 2) Privacy-aware hybrid operation for client confidentiality
-PatentFlow supports both local and online inference paths:
+ClaimPilot supports both local and online inference paths:
 - Sensitive files and privacy-mode requests can be routed to Local LLM or a controlled Pioneer by Fastino endpoint
 - Non-sensitive tasks can use configured online OpenAI-compatible APIs such as OpenAI, OpenRouter, r9s.ai, or vLLM-compatible services
 - Local persistence for attorney-specific preferences
@@ -42,7 +42,7 @@ The UI follows a **Bloomberg Terminal-style** aesthetic:
 ## Trade Secret / Black Box Disclaimer (Intentional)
 Specific system prompts, proprietary dictionaries, and heuristic parsing algorithms are **intentionally omitted** from this public repository to protect intellectual property.
 
-PatentFlow exposes stable interfaces and deterministic boundaries while keeping core prompt logic and proprietary linguistic assets internal.
+ClaimPilot exposes stable interfaces and deterministic boundaries while keeping core prompt logic and proprietary linguistic assets internal.
 
 ---
 
@@ -80,7 +80,7 @@ graph TD
         Skills --> Router[Privacy / Sensitivity Router]
         Router -->|Sensitive files or Privacy Mode| LocalLLM[(Local LLM)]
         Router -->|Non-sensitive tasks| OnlineAPI[(Online LLM API<br/>OpenAI-compatible)]
-        Router -->|Optional trained route| Fastino[(Pioneer by Fastino<br/>PatentFlow Attorney Model)]
+        Router -->|Optional trained route| Fastino[(Pioneer by Fastino<br/>ClaimPilot Attorney Model)]
     end
 ```
 
@@ -103,7 +103,7 @@ A verification workflow designed to surface:
 - institutional terminology consistency
 
 ### 3) Dynamic Attorney Memory (Local Persistent Context Injection)
-PatentFlow supports a **Local User Preference Engine** that stores and recalls attorney preferences entirely offline:
+ClaimPilot supports a **Local User Preference Engine** that stores and recalls attorney preferences entirely offline:
 
 - **SQLite-backed memory** (zero external dependencies)
 - Profile-specific preferences persisted across sessions
@@ -115,7 +115,7 @@ PatentFlow supports a **Local User Preference Engine** that stores and recalls a
 - Supports consistent examiner strategy posture across matters
 
 ### 4) One-Click EPO Prior Art Ingestion
-PatentFlow integrates EPO retrieval to support:
+ClaimPilot integrates EPO retrieval to support:
 - automated ingestion of cited prior art (e.g., D1/D2 full text)
 - reduced manual copy/paste and document hunting
 - faster turnaround from Office Action to structured analysis
@@ -126,8 +126,8 @@ PatentFlow integrates EPO retrieval to support:
 - Improves auditability of the evidence basis used in analysis
 
 ### 5) Real-Time Voice Interaction (Gradbot)
-PatentFlow includes a real-time voice session for attorney-in-the-loop workflows:
-- **Start the session** opens a browser-based voice channel to the PatentFlow engine
+ClaimPilot includes a real-time voice session for attorney-in-the-loop workflows:
+- **Start the session** opens a browser-based voice channel to the ClaimPilot engine
 - Discuss claim charts, examiner objections, and draft strategy conversationally
 - Voice pipeline uses Gradbot for streaming STT → LLM → TTS with sub-second latency
 - Session state is ephemeral; no audio stored or logged
@@ -138,21 +138,21 @@ PatentFlow includes a real-time voice session for attorney-in-the-loop workflows
 - Maintains client confidentiality: voice processing runs locally, no cloud transcription
 
 ### 6) Privacy Mode (Pioneer by Fastino)
-PatentFlow includes an opt-in inference path powered by our own Pioneer by Fastino trained model for EPO prosecution work.
+ClaimPilot includes an opt-in inference path powered by our own Pioneer by Fastino trained model for EPO prosecution work.
 
 **Trained model**
 - Platform: Pioneer by Fastino
-- Model Name: `PatentFlow-epo-patent-attorney-llama-3-1-8b`
+- Model Name: `ClaimPilot-epo-patent-attorney-llama-3-1-8b`
 - Job ID / Model ID: `59d36fbf-6e40-4e07-96d5-617d321842e8`
 - Base URL: `https://api.pioneer.ai/v1`
 - Inference Endpoint: `https://api.pioneer.ai/v1/inference`
-- Training dataset: the curated fine-tuning dataset is included in the repository root as `dataset for training model for PatentFlow Attorney.jsonl`
+- Training dataset: the curated fine-tuning dataset is included in the repository root as `dataset for training model for ClaimPilot Attorney.jsonl`
 
 **Why this model**
 - EPO-specific: trained for European patent attorney workflows, including Art. 56 inventive-step reasoning and Art. 123(2) added-matter risk review
 - Structured outputs: optimized for claim charts, objection extraction, severity labels, examiner reasoning, and recommended attorney actions
 - Domain tone: produces prosecution-oriented analysis instead of generic legal summaries
-- Privacy-aware routing: lets PatentFlow keep the default workflow unchanged while offering a dedicated controlled endpoint for sensitive patent analysis
+- Privacy-aware routing: lets ClaimPilot keep the default workflow unchanged while offering a dedicated controlled endpoint for sensitive patent analysis
 
 **How it is used**
 - Toggle globally with `ENABLE_LOCAL_PRIVACY_MODE=true` in `.env`
@@ -260,7 +260,7 @@ ENABLE_LOCAL_PRIVACY_MODE=false
 FASTINO_API_KEY=
 FASTINO_BASE_URL=https://api.pioneer.ai/v1
 FASTINO_INFERENCE_ENDPOINT=https://api.pioneer.ai/v1/inference
-FASTINO_MODEL_NAME=PatentFlow-epo-patent-attorney-llama-3-1-8b
+FASTINO_MODEL_NAME=ClaimPilot-epo-patent-attorney-llama-3-1-8b
 FASTINO_MODEL_ID=59d36fbf-6e40-4e07-96d5-617d321842e8
 ```
 

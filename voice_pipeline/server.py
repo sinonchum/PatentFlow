@@ -1,4 +1,4 @@
-"""PatentFlow Voice Server using Gradbot + Gradium.
+"""ClaimPilot Voice Server using Gradbot + Gradium.
 
 This replaces the legacy Pipecat/Daily implementation for local demo use.
 Gradbot handles streaming STT/TTS via Gradium and the LLM via the existing
@@ -38,17 +38,17 @@ VOICE_SERVER_HOST = os.getenv("VOICE_SERVER_HOST", "0.0.0.0")
 VOICE_SERVER_PORT = int(os.getenv("VOICE_SERVER_PORT", "7860"))
 PUBLIC_BASE_URL = os.getenv("NEXT_PUBLIC_VOICE_SERVER_URL", f"http://localhost:{VOICE_SERVER_PORT}").rstrip("/")
 
-SYSTEM_PROMPT = """You are PatentFlow Voice Assistant, a professional patent prosecution aide.
+SYSTEM_PROMPT = """You are ClaimPilot Voice Assistant, a professional patent prosecution aide.
 
 You help European patent attorneys discuss office actions, claim charts,
 Art. 56 inventive step, Art. 123(2) added-matter risk, translation issues,
 and response strategy.
 
-You are connected to the local PatentFlow backend. When the user asks for
-PatentFlow-specific work, use tools instead of guessing:
+You are connected to the local ClaimPilot backend. When the user asks for
+ClaimPilot-specific work, use tools instead of guessing:
 - generate_claim_chart for Art. 56 claim/prior-art mapping.
 - verify_translation for Art. 123(2) translation drift checks.
-- start_patentflow_pipeline and check_patentflow_status for full document workflows.
+- start_claimpilot_pipeline and check_claimpilot_status for full document workflows.
 - get_attorney_memory for local attorney style preferences.
 
 Privacy rule: never expose API keys or secrets in speech or UI messages. Do not
@@ -64,11 +64,11 @@ user speaks those languages.
 """
 
 DEFAULT_VOICE_ID = os.getenv("GRADIUM_VOICE_ID", "YTpq7expH9539ERJ")  # Emma
-PATENTFLOW_API_BASE_URL = os.getenv("PATENTFLOW_API_BASE_URL", "http://localhost:8000").rstrip("/")
+CLAIMPILOT_API_BASE_URL = os.getenv("CLAIMPILOT_API_BASE_URL", "http://localhost:8000").rstrip("/")
 _session_contexts: dict[str, dict[str, Any]] = {}
 
 gradbot.init_logging()
-app = fastapi.FastAPI(title="PatentFlow Voice Assistant", version="1.0.0")
+app = fastapi.FastAPI(title="ClaimPilot Voice Assistant", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
@@ -80,7 +80,7 @@ cfg = gradbot.config.from_env()
 
 
 def _post_json(path: str, payload: dict[str, Any]) -> dict[str, Any]:
-    url = f"{PATENTFLOW_API_BASE_URL}{path}"
+    url = f"{CLAIMPILOT_API_BASE_URL}{path}"
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(
         url,
@@ -98,7 +98,7 @@ def _post_json(path: str, payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _get_json(path: str) -> dict[str, Any]:
-    url = f"{PATENTFLOW_API_BASE_URL}{path}"
+    url = f"{CLAIMPILOT_API_BASE_URL}{path}"
     try:
         with urllib.request.urlopen(url, timeout=15) as resp:
             body = resp.read().decode("utf-8")
@@ -108,7 +108,7 @@ def _get_json(path: str) -> dict[str, Any]:
         return {"status": "error", "http_status": exc.code, "error": body[:1000]}
 
 
-def build_patentflow_tools() -> list[gradbot.ToolDef]:
+def build_claimpilot_tools() -> list[gradbot.ToolDef]:
     return [
         gradbot.ToolDef(
             "generate_claim_chart",
@@ -139,8 +139,8 @@ def build_patentflow_tools() -> list[gradbot.ToolDef]:
             }),
         ),
         gradbot.ToolDef(
-            "start_patentflow_pipeline",
-            "Start the full PatentFlow pipeline for office action and specification text.",
+            "start_claimpilot_pipeline",
+            "Start the full ClaimPilot pipeline for office action and specification text.",
             json.dumps({
                 "type": "object",
                 "properties": {
@@ -154,13 +154,13 @@ def build_patentflow_tools() -> list[gradbot.ToolDef]:
             }),
         ),
         gradbot.ToolDef(
-            "check_patentflow_status",
-            "Check status and results for a PatentFlow task id.",
+            "check_claimpilot_status",
+            "Check status and results for a ClaimPilot task id.",
             json.dumps({"type": "object", "properties": {"task_id": {"type": "string"}}, "required": ["task_id"]}),
         ),
         gradbot.ToolDef(
             "get_attorney_memory",
-            "Retrieve local attorney preference memory for a PatentFlow attorney profile.",
+            "Retrieve local attorney preference memory for a ClaimPilot attorney profile.",
             json.dumps({"type": "object", "properties": {"attorney_id": {"type": "string"}}, "required": ["attorney_id"]}),
         ),
     ]
@@ -174,7 +174,7 @@ def make_config(msg: dict[str, Any]) -> gradbot.SessionConfig:
         voice_id=voice_id,
         language=gradbot.LANGUAGES.get(language),
         instructions=prompt,
-        tools=build_patentflow_tools(),
+        tools=build_claimpilot_tools(),
         **({"assistant_speaks_first": True, "silence_timeout_s": 0.0} | cfg.session_kwargs),
     )
 
@@ -187,7 +187,7 @@ def _clip(text: Any, limit: int) -> str:
 def _build_session_prompt(ctx: dict[str, Any]) -> str:
     latest_result = ctx.get("latest_result") or {}
     parts = [SYSTEM_PROMPT]
-    parts.append("\nCurrent PatentFlow workspace context is attached below. Use it as the primary case file for this voice session.")
+    parts.append("\nCurrent ClaimPilot workspace context is attached below. Use it as the primary case file for this voice session.")
     parts.append("\nMatter metadata:")
     parts.append(f"- Attorney profile: {ctx.get('attorney_profile') or 'Default'}")
     parts.append(f"- Attorney name: {ctx.get('attorney_name') or ''}")
@@ -204,12 +204,12 @@ def _build_session_prompt(ctx: dict[str, Any]) -> str:
         parts.append("\nPatent Specification text:\n" + specification)
 
     if latest_result:
-        parts.append("\nLatest PatentFlow result JSON:\n" + _clip(json.dumps(latest_result, ensure_ascii=False), 12000))
+        parts.append("\nLatest ClaimPilot result JSON:\n" + _clip(json.dumps(latest_result, ensure_ascii=False), 12000))
 
     parts.append(
-        "\nWhen answering, explicitly rely on this attached PatentFlow context. "
+        "\nWhen answering, explicitly rely on this attached ClaimPilot context. "
         "If the user asks to analyze the Office Action, discuss the objections, cited art, claim limitations, and response strategy. "
-        "If deeper structured output is needed, call the PatentFlow tools."
+        "If deeper structured output is needed, call the ClaimPilot tools."
     )
     return "\n".join(parts)
 
@@ -242,7 +242,7 @@ async def handle_tool_call(handle, input_handle, websocket) -> None:
             await handle.send(json.dumps(result, ensure_ascii=False))
             return
 
-        if tool_name == "start_patentflow_pipeline":
+        if tool_name == "start_claimpilot_pipeline":
             result = await asyncio.to_thread(_post_json, "/api/generate", {
                 "office_action_text": args.get("office_action_text", ""),
                 "specification_text": args.get("specification_text", ""),
@@ -253,7 +253,7 @@ async def handle_tool_call(handle, input_handle, websocket) -> None:
             await handle.send(json.dumps(result, ensure_ascii=False))
             return
 
-        if tool_name == "check_patentflow_status":
+        if tool_name == "check_claimpilot_status":
             task_id = str(args.get("task_id", "")).strip()
             result = await asyncio.to_thread(_get_json, f"/api/status/{task_id}")
             await handle.send(json.dumps(result, ensure_ascii=False))
@@ -265,9 +265,9 @@ async def handle_tool_call(handle, input_handle, websocket) -> None:
             await handle.send(json.dumps(result, ensure_ascii=False))
             return
 
-        await handle.send_error(f"Unknown PatentFlow tool: {tool_name}")
+        await handle.send_error(f"Unknown ClaimPilot tool: {tool_name}")
     except Exception as exc:
-        await handle.send_error(f"PatentFlow tool failed: {exc}")
+        await handle.send_error(f"ClaimPilot tool failed: {exc}")
 
 
 @app.get("/health")
@@ -283,7 +283,7 @@ async def health() -> dict[str, Any]:
 @app.post("/start_bot")
 @app.post("/connect")
 async def start_bot(request: fastapi.Request) -> dict[str, str]:
-    # Compatibility endpoint for the main PatentFlow frontend button.
+    # Compatibility endpoint for the main ClaimPilot frontend button.
     # Gradbot runs in the browser via WebSocket rather than spawning a Daily bot,
     # so the correct action is embedding the voice UI hosted by this service.
     try:

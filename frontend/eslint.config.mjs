@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated Gradbot voice runtime bundles; not authored app source.
+    "public/voice-runtime/**",
   ]),
 ]);
 

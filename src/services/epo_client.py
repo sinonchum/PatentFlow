@@ -1,5 +1,5 @@
 """
-PatentFlow EPO Integration Layer
+ClaimPilot EPO Integration Layer
 =================================
 OPS (Open Patent Services) + Register API client with:
   - Redis-backed OAuth2 singleton (token TTL 1200s)
@@ -31,7 +31,7 @@ from lxml import etree
 from pydantic import BaseModel, Field, field_validator
 from dotenv import load_dotenv
 
-logger = logging.getLogger("patentflow.epo")
+logger = logging.getLogger("claimpilot.epo")
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -280,9 +280,9 @@ class EPOClient:
             metadata = await client.smart_fetch("EP3654128")
     """
 
-    _TOKEN_KEY = "patentflow:epo:access_token"
-    _RATE_KEY_PREFIX = "patentflow:epo:rate:"
-    _CACHE_KEY_PREFIX = "patentflow:epo:cache:"
+    _TOKEN_KEY = "claimpilot:epo:access_token"
+    _RATE_KEY_PREFIX = "claimpilot:epo:rate:"
+    _CACHE_KEY_PREFIX = "claimpilot:epo:cache:"
     _CACHE_TTL = 86400 * 7  # 7 days
 
     def __init__(self, config: Optional[EPOConfig] = None) -> None:

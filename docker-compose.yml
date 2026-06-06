@@ -7,7 +7,7 @@ services:
     volumes:
       - redis-data:/data
     networks:
-      - patentflow-net
+      - claimpilot-net
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -24,11 +24,11 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/0
     networks:
-      - patentflow-net
+      - claimpilot-net
     ports:
       - "8000:8000"
     volumes:
-      - patentflow-data:/app/data
+      - claimpilot-data:/app/data
     depends_on:
       redis:
         condition: service_healthy
@@ -55,9 +55,9 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_CONCURRENCY=1
     networks:
-      - patentflow-net
+      - claimpilot-net
     volumes:
-      - patentflow-data:/app/data
+      - claimpilot-data:/app/data
     depends_on:
       redis:
         condition: service_healthy
@@ -68,10 +68,10 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
-        NEXT_PUBLIC_PATENTFLOW_API_KEY: ${NEXT_PUBLIC_PATENTFLOW_API_KEY:-}
+        NEXT_PUBLIC_CLAIMPILOT_API_KEY: ${NEXT_PUBLIC_CLAIMPILOT_API_KEY:-}
         NEXT_PUBLIC_VOICE_SERVER_URL: ${NEXT_PUBLIC_VOICE_SERVER_URL:-http://localhost:7860}
     networks:
-      - patentflow-net
+      - claimpilot-net
     ports:
       - "3000:3000"
     depends_on:
@@ -79,9 +79,9 @@ services:
         condition: service_healthy
 
 networks:
-  patentflow-net:
+  claimpilot-net:
     driver: bridge
 
 volumes:
   redis-data:
-  patentflow-data:
+  claimpilot-data:
